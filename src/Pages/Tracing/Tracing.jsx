@@ -8,13 +8,14 @@ import SearchInput from 'components/SearchInput/SearchInput';
 import FilterControls from 'components/FilterControls/FilterControls';
 import TraceDetailPanel from './TraceDetailPanel.jsx';
 import { useSearch } from '../../hooks/useSearch.js';
+import { useEnvironmentFilter } from '../../hooks/useEnvironmentFilter.js';
 import ColumnVisibilityModal from './ColumnVisibilityModal.jsx';
 import FilterButton from 'components/FilterButton/FilterButton';
-import { Columns, Plus, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Columns, Plus, Edit } from 'lucide-react';
 import { createTrace, updateTrace } from './CreateTrace.jsx';
 import { langfuse } from '../../lib/langfuse';
 import { fetchTraces, deleteTrace } from './TracingApi';
-import { fetchTraceDetails } from './TraceDetailApi'; // Trace 상세 정보를 가져오는 API 추가
+import { fetchTraceDetails } from './TraceDetailApi';
 
 const Tracing = () => {
   const [activeTab, setActiveTab] = useState('Traces');
@@ -23,11 +24,40 @@ const Tracing = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchType, setSearchType] = useState('IDs / Names');
-  const { searchQuery, setSearchQuery, filteredData: filteredTraces } = useSearch(traces, searchType);
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [favoriteState, setFavoriteState] = useState({});
   const [selectedRows, setSelectedRows] = useState(new Set());
-  const [pendingTraceId, setPendingTraceId] = useState(null); // 새로 생성 중인 Trace ID를 추적하는 상태
+  const [pendingTraceId, setPendingTraceId] = useState(null);
+
+  // 1. API 응답(traces)을 기반으로 동적인 환경 목록 생성
+  const allEnvironments = useMemo(() => {
+    if (!traces || traces.length === 0) {
+        return [];
+    }
+    const uniqueEnvNames = [...new Set(traces.map(trace => trace.environment || 'default'))];
+    return uniqueEnvNames.map((name, index) => ({
+        id: `env-${index}`,
+        name: name,
+    }));
+  }, [traces]);
+
+  // 2. 생성된 목록을 훅에 전달
+  const {
+    selectedEnvs,
+    ...envFilterProps
+  } = useEnvironmentFilter(allEnvironments);
+    
+  const { searchQuery, setSearchQuery, filteredData } = useSearch(traces, searchType);
+
+  // 3. 환경 필터를 적용한 최종 데이터 목록
+  const filteredTraces = useMemo(() => {
+    const selectedEnvNames = new Set(selectedEnvs.map(e => e.name));
+    // 아무것도 선택되지 않았으면 필터링하지 않음
+    if (selectedEnvNames.size === 0) return filteredData;
+    // 선택된 환경을 포함하는 데이터만 필터링
+    return filteredData.filter(trace => selectedEnvNames.has(trace.environment));
+  }, [filteredData, selectedEnvs]);
+
 
   const toggleFavorite = useCallback((traceId) => {
     setFavoriteState(prev => ({ ...prev, [traceId]: !prev[traceId] }));
@@ -66,11 +96,10 @@ const Tracing = () => {
   
   useEffect(() => { loadTraces(); }, []);
 
-  // 'New Trace' 버튼 클릭 핸들러 수정
   const handleCreateClick = async () => {
     const newTraceId = await createTrace();
     if (newTraceId) {
-      setPendingTraceId(newTraceId); // 폴링을 시작하기 위해 pending 상태에 ID 설정
+      setPendingTraceId(newTraceId);
     }
   };
 
@@ -104,11 +133,9 @@ const Tracing = () => {
   const toggleColumnVisibility = (key) => setColumns(prev => prev.map(col => col.key === key ? { ...col, visible: !col.visible } : col));
   const visibleColumns = useMemo(() => columns.filter(c => c.visible), [columns]);
 
-  // pendingTraceId가 변경될 때마다 폴링 로직을 실행하는 useEffect
   useEffect(() => {
     if (!pendingTraceId) return;
 
-    // "생성 중" 상태를 즉시 UI에 보여주기 위해 가짜 데이터를 목록 맨 앞에 추가
     setTraces(prevTraces => [
       { 
         id: pendingTraceId, 
@@ -116,7 +143,6 @@ const Tracing = () => {
         timestamp: new Date().toLocaleString(), 
         input: 'Pending...', 
         output: 'Pending...',
-        // 👇 필수 필드에 대한 기본값을 추가합니다.
         userId: '...',
         cost: null,
         latency: 0,
@@ -127,35 +153,30 @@ const Tracing = () => {
 
     const interval = setInterval(async () => {
       try {
-        // 2초마다 해당 ID의 Trace가 생성되었는지 확인
         await fetchTraceDetails(pendingTraceId);
         
-        // 성공적으로 조회되면, 폴링을 멈추고 전체 목록을 새로고침
         clearInterval(interval);
         setPendingTraceId(null);
         await loadTraces();
         console.log(`Trace ${pendingTraceId} has been confirmed and list updated.`);
 
       } catch (error) {
-        // 아직 생성되지 않았거나 다른 오류 발생 시, 콘솔에 로그만 남기고 계속 폴링
         console.log(`Polling for trace ${pendingTraceId}... not found yet.`);
       }
-    }, 2000); // 2초 간격으로 확인
+    }, 2000);
 
-    // 30초 후에도 확인되지 않으면 타임아웃 처리
     const timeout = setTimeout(() => {
       clearInterval(interval);
       setPendingTraceId(null);
       alert(`Trace ${pendingTraceId} 생성 확인에 실패했습니다. 목록을 수동으로 새로고침 해주세요.`);
-      loadTraces(); // 실패하더라도 목록은 한 번 새로고침
+      loadTraces();
     }, 30000);
 
-    // 컴포넌트가 언마운트되거나 pendingTraceId가 바뀌면 인터벌과 타임아웃 정리
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [pendingTraceId]); // loadTraces를 의존성 배열에서 제거
+  }, [pendingTraceId]);
 
 
   return (
@@ -177,7 +198,8 @@ const Tracing = () => {
               setSearchType={setSearchType}
               searchTypes={['IDs / Names', 'Full Text']}
             />
-            <FilterControls onRefresh={loadTraces} />
+            {/* FilterControls에 envFilterProps 전달 */}
+            <FilterControls onRefresh={loadTraces} envFilterProps={envFilterProps} />
           </div>
           <div className={styles.filterRightGroup}>
             <FilterButton onClick={handleCreateClick}>

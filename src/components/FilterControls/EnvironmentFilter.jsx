@@ -1,23 +1,22 @@
 // src/components/FilterControls/EnvironmentFilter.jsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import styles from './EnvironmentFilter.module.css';
 
-// 임시 데이터
-const ALL_ENVIRONMENTS = [
-  { id: 'env1', name: 'default' },
-  { id: 'env2', name: 'langfuse-prompt-experiment' },
-];
-
-const EnvironmentFilter = () => {
+const EnvironmentFilter = ({
+  buttonLabel,
+  searchTerm,
+  setSearchTerm,
+  filteredEnvironments,
+  isAllSelected,
+  // prop 이름을 훅의 반환값과 일치시킵니다.
+  selectAllEnvironments,
+  toggleEnvironment,
+  clearAllEnvironments
+}) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [environments, setEnvironments] = useState(
-    ALL_ENVIRONMENTS.map(env => ({ ...env, checked: env.name === 'default' }))
-  );
-  const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
 
-  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -27,35 +26,6 @@ const EnvironmentFilter = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const selectedEnvs = useMemo(() => environments.filter(e => e.checked), [environments]);
-  const isAllSelected = useMemo(() => environments.length > 0 && selectedEnvs.length === environments.length, [environments, selectedEnvs]);
-
-  const buttonLabel = useMemo(() => {
-    if (selectedEnvs.length === 0) return 'None';
-    if (selectedEnvs.length === 1) return selectedEnvs[0].name;
-    if (selectedEnvs.length === environments.length) return 'All';
-    return `${selectedEnvs.length} selected`;
-  }, [selectedEnvs, environments.length]);
-
-  const filteredEnvironments = useMemo(() =>
-    environments.filter(env => env.name.toLowerCase().includes(searchTerm.toLowerCase())),
-    [environments, searchTerm]
-  );
-  
-  const handleToggle = (id) => {
-    setEnvironments(prev =>
-      prev.map(env => (env.id === id ? { ...env, checked: !env.checked } : env))
-    );
-  };
-
-  const handleSelectAll = (isChecked) => {
-    setEnvironments(prev => prev.map(env => ({ ...env, checked: isChecked })));
-  };
-  
-  const handleClear = () => {
-    setEnvironments(prev => prev.map(env => ({ ...env, checked: false })));
-  };
 
   return (
     <div className={styles.container} ref={dropdownRef}>
@@ -79,7 +49,8 @@ const EnvironmentFilter = () => {
               <input
                 type="checkbox"
                 checked={isAllSelected}
-                onChange={(e) => handleSelectAll(e.target.checked)}
+                // 'Select All' 체크박스 기능 연결
+                onChange={(e) => selectAllEnvironments(e.target.checked)}
               />
               <span>Select All</span>
             </label>
@@ -88,13 +59,15 @@ const EnvironmentFilter = () => {
                 <input
                   type="checkbox"
                   checked={env.checked}
-                  onChange={() => handleToggle(env.id)}
+                  // 개별 체크박스 기능 연결
+                  onChange={() => toggleEnvironment(env.id)}
                 />
                 <span>{env.name}</span>
               </label>
             ))}
           </div>
-          <button className={styles.clearButton} onClick={handleClear}>
+          {/* 'Clear filters' 버튼 기능 연결 */}
+          <button className={styles.clearButton} onClick={clearAllEnvironments}>
             Clear filters
           </button>
         </div>

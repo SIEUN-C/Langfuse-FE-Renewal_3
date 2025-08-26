@@ -4,13 +4,15 @@ import styles from './FilterControls.module.css';
 import TimeRangeFilter from './TimeRangeFilter';
 import EnvironmentFilter from './EnvironmentFilter';
 import FilterBuilder from './FilterBuilder';
-import RefreshButton from './RefreshButton'; // 새로고침 버튼 import
+import RefreshButton from './RefreshButton';
 
-const FilterControls = ({ onRefresh }) => {
+// envFilterProps를 props로 받도록 수정
+const FilterControls = ({ onRefresh, envFilterProps }) => {
   return (
     <div className={styles.filterControls}>
       <TimeRangeFilter />
-      <EnvironmentFilter />
+      {/* EnvironmentFilter에 envFilterProps를 전달 */}
+      <EnvironmentFilter {...envFilterProps} />
       <FilterBuilder />
       {onRefresh && <RefreshButton onClick={onRefresh} />}
     </div>
