@@ -32,4 +32,14 @@
   word-break: break-all;
   color: #c9d1d9;
   line-height: 1.5;
+  
+  /* ▼▼▼ textarea를 위한 스타일 추가 ▼▼▼ */
+  flex-grow: 1;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  font-size: inherit;
+  width: 100%;
 }
