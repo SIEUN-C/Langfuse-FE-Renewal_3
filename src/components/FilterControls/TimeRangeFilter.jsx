@@ -4,15 +4,13 @@ import { ChevronDown } from 'lucide-react';
 import FilterButton from '../FilterButton/FilterButton';
 import styles from './TimeRangeFilter.module.css';
 
-const timeOptions = [
-  '30 min', '1 hour', '6 hours', '24 hours',
-  '3 days', '7 days', '14 days',
-  '1 month', '3 months', 'All time'
-];
-
-const TimeRangeFilter = () => {
+const TimeRangeFilter = ({
+  buttonLabel,
+  selectedOption,
+  timeOptions,
+  handleTimeSelect
+}) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTime, setSelectedTime] = useState('Past 24 hours');
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -25,27 +23,26 @@ const TimeRangeFilter = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   
-  const handleTimeSelect = (time) => {
-    const displayValue = time === 'All time' ? time : `Past ${time}`;
-    setSelectedTime(displayValue);
+  const onSelect = (option) => {
+    handleTimeSelect(option);
     setIsOpen(false);
   };
 
   return (
     <div className={styles.container} ref={dropdownRef}>
       <FilterButton onClick={() => setIsOpen(!isOpen)}>
-        {selectedTime} <ChevronDown size={16} />
+        {buttonLabel} <ChevronDown size={16} />
       </FilterButton>
       {isOpen && (
         <div className={styles.dropdownMenu}>
           {timeOptions.map((option) => (
             <div
-              key={option}
-              className={`${styles.dropdownItem} ${selectedTime.includes(option) ? styles.selected : ''}`}
-              onClick={() => handleTimeSelect(option)}
+              key={option.label}
+              className={`${styles.dropdownItem} ${selectedOption.label === option.label ? styles.selected : ''}`}
+              onClick={() => onSelect(option)}
             >
-              {selectedTime.includes(option) && <span className={styles.checkmark}>✓</span>}
-              {option}
+              {selectedOption.label === option.label && <span className={styles.checkmark}>✓</span>}
+              {option.label}
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 // src/pages/Tracing/Tracing.jsx
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import dayjs from 'dayjs'; // dayjs 임포트
 import styles from './Tracing.module.css';
 import { DataTable } from 'components/DataTable/DataTable';
 import { traceTableColumns } from './traceColumns.jsx';
@@ -9,6 +10,7 @@ import FilterControls from 'components/FilterControls/FilterControls';
 import TraceDetailPanel from './TraceDetailPanel.jsx';
 import { useSearch } from '../../hooks/useSearch.js';
 import { useEnvironmentFilter } from '../../hooks/useEnvironmentFilter.js';
+import { useTimeRangeFilter } from '../../hooks/useTimeRangeFilter'; // 새로 만든 훅 임포트
 import ColumnVisibilityModal from './ColumnVisibilityModal.jsx';
 import FilterButton from 'components/FilterButton/FilterButton';
 import { Columns, Plus, Edit } from 'lucide-react';
@@ -29,35 +31,39 @@ const Tracing = () => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [pendingTraceId, setPendingTraceId] = useState(null);
 
-  // 1. API 응답(traces)을 기반으로 동적인 환경 목록 생성
   const allEnvironments = useMemo(() => {
-    if (!traces || traces.length === 0) {
-        return [];
-    }
+    if (!traces || traces.length === 0) return [];
     const uniqueEnvNames = [...new Set(traces.map(trace => trace.environment || 'default'))];
-    return uniqueEnvNames.map((name, index) => ({
-        id: `env-${index}`,
-        name: name,
-    }));
+    return uniqueEnvNames.map((name, index) => ({ id: `env-${index}`, name }));
   }, [traces]);
 
-  // 2. 생성된 목록을 훅에 전달
-  const {
-    selectedEnvs,
-    ...envFilterProps
-  } = useEnvironmentFilter(allEnvironments);
-    
+  // useTimeRangeFilter 훅 사용
+  const timeRangeFilter = useTimeRangeFilter();
+  
+  const { selectedEnvs, ...envFilterProps } = useEnvironmentFilter(allEnvironments);
   const { searchQuery, setSearchQuery, filteredData } = useSearch(traces, searchType);
 
-  // 3. 환경 필터를 적용한 최종 데이터 목록
+  // 검색, 환경, 시간 필터를 순차적으로 적용
   const filteredTraces = useMemo(() => {
-    const selectedEnvNames = new Set(selectedEnvs.map(e => e.name));
-    // 아무것도 선택되지 않았으면 필터링하지 않음
-    if (selectedEnvNames.size === 0) return filteredData;
-    // 선택된 환경을 포함하는 데이터만 필터링
-    return filteredData.filter(trace => selectedEnvNames.has(trace.environment));
-  }, [filteredData, selectedEnvs]);
+    let tempTraces = filteredData;
 
+    // 환경 필터 적용
+    const selectedEnvNames = new Set(selectedEnvs.map(e => e.name));
+    if (selectedEnvNames.size > 0) {
+      tempTraces = tempTraces.filter(trace => selectedEnvNames.has(trace.environment));
+    }
+
+    // 시간 범위 필터 적용
+    const { startDate, endDate } = timeRangeFilter;
+    if (startDate && endDate) {
+      tempTraces = tempTraces.filter(trace => {
+        const traceTimestamp = dayjs(trace.timestamp);
+        return traceTimestamp.isAfter(startDate) && traceTimestamp.isBefore(endDate);
+      });
+    }
+
+    return tempTraces;
+  }, [filteredData, selectedEnvs, timeRangeFilter]);
 
   const toggleFavorite = useCallback((traceId) => {
     setFavoriteState(prev => ({ ...prev, [traceId]: !prev[traceId] }));
@@ -198,8 +204,11 @@ const Tracing = () => {
               setSearchType={setSearchType}
               searchTypes={['IDs / Names', 'Full Text']}
             />
-            {/* FilterControls에 envFilterProps 전달 */}
-            <FilterControls onRefresh={loadTraces} envFilterProps={envFilterProps} />
+            <FilterControls
+              onRefresh={loadTraces}
+              envFilterProps={envFilterProps}
+              timeRangeFilterProps={timeRangeFilter}
+            />
           </div>
           <div className={styles.filterRightGroup}>
             <FilterButton onClick={handleCreateClick}>
