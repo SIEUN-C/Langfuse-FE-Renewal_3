@@ -112,35 +112,54 @@ const FilterBuilder = () => {
     
   // ❗️ 3. 메뉴가 열릴 때 위치를 계산하고 스타일을 적용하는 useEffect 추가
   useEffect(() => {
-    if (isOpen && containerRef.current && menuRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const menuWidth = menuRef.current.offsetWidth;
-      const viewportWidth = window.innerWidth;
-      const margin = 16; // 화면 가장자리로부터 최소한의 여백
-
-      // 1. 기본 위치(left: 0)를 기준으로 메뉴의 절대 좌표를 계산합니다.
-      let newLeft = 0; // 컨테이너 기준 상대 위치
-      const absoluteMenuLeft = containerRect.left + newLeft;
-      const absoluteMenuRight = absoluteMenuLeft + menuWidth;
-
-      // 2. 오른쪽 화면 이탈 여부 확인
-      if (absoluteMenuRight > viewportWidth - margin) {
-        // 오른쪽으로 벗어났다면, 벗어난 만큼 왼쪽으로 이동시킵니다.
-        const overflow = absoluteMenuRight - (viewportWidth - margin);
-        newLeft -= overflow;
-      }
-
-      // 3. 왼쪽 화면 이탈 여부 확인
-      if (absoluteMenuLeft + newLeft < margin) {
-        // 왼쪽으로 벗어났다면, 벗어난 만큼 오른쪽으로 이동시킵니다.
-        const overflow = margin - (absoluteMenuLeft + newLeft);
-        newLeft += overflow;
-      }
-      
-      // 4. 계산된 최종 위치를 스타일로 적용합니다.
-      setMenuStyle({ left: `${newLeft}px` });
+    // 메뉴가 닫혀있거나, ref가 준비되지 않았으면 아무것도 하지 않음
+    if (!isOpen || !containerRef.current || !menuRef.current) {
+      return;
     }
-  }, [isOpen]);
+
+    const containerElement = containerRef.current;
+    const menuElement = menuRef.current;
+
+    // 위치를 다시 계산하고 적용하는 함수
+    const recalculatePosition = () => {
+    const containerRect = containerElement.getBoundingClientRect();
+    const menuWidth = menuElement.offsetWidth; // getBoundingClientRect().width 대신 사용
+    const viewportWidth = window.innerWidth;
+    const margin = 16;
+
+    let newLeft = 0;
+    const absoluteMenuLeft = containerRect.left + newLeft;
+    const absoluteMenuRight = absoluteMenuLeft + menuWidth;
+
+    if (absoluteMenuRight > viewportWidth - margin) {
+      const overflow = absoluteMenuRight - (viewportWidth - margin);
+      newLeft -= overflow;
+    }
+
+    if (absoluteMenuLeft + newLeft < margin) {
+      const overflow = margin - (absoluteMenuLeft + newLeft);
+      newLeft += overflow;
+    }
+    
+    // 불필요한 리렌더링을 방지하기 위해 직접 스타일을 적용
+    menuElement.style.left = `${newLeft}px`;
+  };
+
+    // ResizeObserver 인스턴스 생성. 메뉴 크기가 바뀔 때마다 recalculatePosition 호출
+    const resizeObserver = new ResizeObserver(recalculatePosition);
+    
+    // 메뉴 요소의 크기 변경 감시 시작
+    resizeObserver.observe(menuElement);
+    
+    // 초기 위치 계산을 위해 한 번 호출
+    recalculatePosition();
+
+    // cleanup 함수: 컴포넌트가 unmount되거나, 메뉴가 닫힐 때 observer 연결 해제
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isOpen]); // 이제 이 useEffect는 메뉴가 열리고 닫힐 때만 실행됨
+
 
   // 외부 클릭 시 드롭다운 닫기 로직 (containerRef 사용하도록 수정)
   useEffect(() => {
