@@ -46,9 +46,9 @@ const Comments = ({
     if (newComment.trim()) {
       const result = await onAddComment(newComment);
       if (result.success) {
-        setNewComment('');
+        setNewComment(''); // 성공 시 입력창 비우기
       } else {
-        alert(`댓글 추가 실패: ${result.error}`);
+        alert(`댓글 추가 실패: ${result.error}`); // 실패 시 사용자에게 알림
       }
     }
   };

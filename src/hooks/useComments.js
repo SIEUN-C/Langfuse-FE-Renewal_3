@@ -4,15 +4,15 @@ import { fetchComments, createComment, deleteComment } from '../api/commentsApi'
 
 /**
  * 댓글 관련 로직을 관리하는 커스텀 훅
- * @param {'TRACE' | 'OBSERVATION'} objectType - 댓글을 달 대상의 타입
- * @param {string} objectId - 댓글을 달 대상의 ID
+ * @param {string} projectId - 댓글이 속한 프로젝트의 ID
+ * @param {'TRACE' | 'OBSERVATION'} objectType
+ * @param {string} objectId
  */
-export const useComments = (objectType, objectId) => {
+export const useComments = (projectId, objectType, objectId) => {
   const [comments, setComments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 댓글 목록을 불러오는 함수
   const loadComments = useCallback(async () => {
     if (!objectId) return;
     setIsLoading(true);
@@ -27,17 +27,17 @@ export const useComments = (objectType, objectId) => {
     }
   }, [objectType, objectId]);
 
-  // objectId가 변경될 때마다 댓글을 새로 불러옵니다.
   useEffect(() => {
     loadComments();
   }, [loadComments]);
 
   // 댓글 추가 함수
   const addComment = async (content) => {
-    if (!objectId) return { success: false, error: 'Object ID is missing.' };
+    if (!objectId || !projectId) return { success: false, error: 'ID is missing.' };
     try {
-      await createComment({ objectType, objectId, content });
-      await loadComments(); // 추가 후 목록 새로고침
+      // [수정] projectId를 createComment 함수로 전달
+      await createComment({ projectId, objectType, objectId, content });
+      await loadComments();
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -49,7 +49,7 @@ export const useComments = (objectType, objectId) => {
     if (!objectId) return { success: false, error: 'Object ID is missing.' };
     try {
       await deleteComment({ commentId });
-      await loadComments(); // 삭제 후 목록 새로고침
+      await loadComments();
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };

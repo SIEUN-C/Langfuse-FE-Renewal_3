@@ -6,7 +6,7 @@ import Toast from '../../components/Toast/Toast';
 import SidePanel from '../../components/SidePanel/SidePanel';
 import Comments from '../../components/Comments/Comments';
 import AddToDatasetModal from '../../components/AddToDatasetModal/AddToDatasetModal';
-import { useComments } from '../../hooks/useComments'; // 커스텀 훅 import
+import { useComments } from '../../hooks/useComments';
 
 // FormattedTable 컴포넌트
 const FormattedTable = ({ data }) => {
@@ -48,15 +48,17 @@ const TraceDetailView = ({ details, isLoading, error }) => {
 
   const isObservation = details && 'type' in details && 'traceId' in details;
   const objectType = isObservation ? 'OBSERVATION' : 'TRACE';
+  const projectId = details?.projectId; // projectId 추출
   
   // useComments 훅을 사용하여 댓글 관련 상태와 함수를 가져옵니다.
+  // [수정] useComments 훅에 projectId 전달
   const {
     comments,
     isLoading: isCommentsLoading,
     error: commentsError,
     addComment,
     removeComment,
-  } = useComments(objectType, details?.id);
+  } = useComments(projectId, objectType, details?.id);
 
   // 댓글 추가 핸들러
   const handleAddComment = async (content) => {
@@ -66,6 +68,7 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     } else {
       alert(`오류: ${result.error}`);
     }
+    return result; // [수정] Comments.jsx로 결과를 반환합니다.
   };
 
   // 댓글 삭제 핸들러
@@ -76,6 +79,7 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     } else {
       alert(`오류: ${result.error}`);
     }
+    return result; // [수정] Comments.jsx로 결과를 반환합니다.
   };
 
   const handleCopy = (text, type) => {
