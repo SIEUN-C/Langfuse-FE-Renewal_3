@@ -1,107 +1,91 @@
 /* src/components/FilterControls/FilterBuilder.module.css */
+
 .container {
   position: relative;
-}
-
-.badge {
-  background-color: #334155;
-  color: #e2e8f0;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  margin-left: 2px;
+  display: inline-block;
 }
 
 .dropdownMenu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  top: calc(100% + 8px);
+  /* ❗️ 핵심: left, right 속성을 여기서 제거합니다. */
+  /* JavaScript가 인라인 스타일로 제어하게 됩니다. */
+  
+  width: max-content;
+  min-width: 750px;
+  z-index: 1000;
+  
+  /* 나머지 스타일은 이전과 동일하게 유지 */
   background-color: #0f172a;
   border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 12px;
-  z-index: 10;
-  width: 550px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* ▼▼▼ 이 부분 수정 ▼▼▼ */
 .filterRow {
-  display: flex; /* grid 대신 flex 사용 */
+  display: flex;
+  align-items: center;
   gap: 8px;
-  align-items: center; /* flexbox의 수직 중앙 정렬 */
 }
 
 .conjunction {
-  font-size: 13px;
-  color: #94a3b8;
-  text-align: right;
-  flex-basis: 50px; /* 고정 너비 설정 */
-  flex-shrink: 0;
-  padding-right: 8px;
+  color: #8a8a9e;
+  font-size: 14px;
+  width: 60px; /* 'Where', 'And' 텍스트 정렬을 위해 너비 고정 */
 }
 
 .select, .input {
   background-color: #1e293b;
-  border: 1px solid #4b5569;
-  border-radius: 4px;
-  color: #cbd5e1;
-  font-size: 13px;
-  padding: 6px 8px;
-  height: 32px;
-  box-sizing: border-box;
-  margin: 0;
-}
-
-/* flex-grow를 이용해 너비 비율 설정 */
-.select {
-  flex: 1 1 0%;
-}
-.input {
-  flex: 1.5 1 0%;
-}
-/* ▲▲▲ 이 부분 수정 ▲▲▲ */
-
-
-.select:focus, .input:focus {
-  outline: none;
-  border-color: #4f46e5;
-}
-
-.removeButton {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  border-radius: 50%;
-}
-.removeButton:hover {
-  background-color: #334155;
-  color: #ef4444;
-}
-
-.addButton {
-  background-color: transparent;
-  border: 1px solid #4b5563;
-  color: #94a3b8;
-  padding: 6px 12px;
+  color: #e0e0ff;
+  border: 1px solid #334155;
   border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.input {
+  flex-grow: 1; /* 값 입력창이 남은 공간을 채우도록 설정 */
+}
+
+.removeButton, .addButton {
+  background-color: transparent;
+  color: #8a8a9e;
+  border: none;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 6px;
-  align-self: flex-start;
-  transition: all 0.2s ease;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
 }
+
+.removeButton:hover {
+  background-color: #ff4a4a20;
+  color: #ff7a7a;
+}
+
+.addButton {
+  background-color: #3c3c5a50;
+  align-self: flex-start; /* 버튼이 왼쪽 정렬되도록 */
+  margin-top: 8px;
+}
+
 .addButton:hover {
-  border-color: #e2e8f0;
-  color: #e2e8f0;
+  background-color: #4a4a6a;
+  color: #ffffff;
+}
+
+.badge {
+  background-color: #3a86ff;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 10px;
+  margin-left: 8px;
+  font-weight: bold;
 }
