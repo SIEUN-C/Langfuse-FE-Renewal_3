@@ -64,17 +64,18 @@ export const createTrace = async (callback) => {
 
     // ------------------------------------
 
-    // 데이터를 즉시 서버로 전송하기 위해 flush()를 호출합니다.
+    // 데이터를 즉시 서버로 전송합니다.
     await langfuse.flush();
 
-    alert(`새로운 Trace가 생성되었습니다. ID: ${trace.id}`);
+    alert(`새로운 Trace 생성 요청이 전송되었습니다. ID: ${trace.id}`);
     
-    if (callback) {
-      callback();
-    }
+    // 생성된 Trace의 ID를 반환합니다.
+    return trace.id;
+
   } catch (error) {
     console.error("Trace 생성 중 오류 발생:", error);
     alert("Trace 생성에 실패했습니다. 콘솔을 확인해주세요.");
+    return null;
   }
 };
 
@@ -101,9 +102,9 @@ export const updateTrace = async (trace, callback) => {
 
     alert(`Trace가 업데이트되었습니다. ID: ${trace.id}`);
 
-    if (callback) {
-      callback();
-    }
+    // 업데이트된 내용도 지연 후 콜백을 실행합니다.
+    await flushAndReloadWithDelay(callback);
+
   } catch (error) {
     console.error("Trace 업데이트 중 오류 발생:", error);
     alert("Trace 업데이트에 실패했습니다. 콘솔을 확인해주세요.");

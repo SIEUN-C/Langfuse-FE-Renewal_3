@@ -179,7 +179,8 @@ const TraceDetailView = ({ details, isLoading, error }) => {
                     <Plus size={14} /> Add to datasets
                 </button>
             )}
-            {!isObservation && (
+            {/* Annotate 버튼 */}
+            {/* {!isObservation && (
                  <div className={styles.annotateButton}>
                     <button>
                         <SquarePen size={14} /> Annotate
@@ -188,7 +189,7 @@ const TraceDetailView = ({ details, isLoading, error }) => {
                         <ChevronDown size={16} />
                     </div>
                 </div>
-            )}
+            )} */}
             <button
               className={`${styles.iconButton} ${styles.actionButtonSecondary}`}
               onClick={() => setIsCommentsOpen(true)}

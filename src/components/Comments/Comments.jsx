@@ -15,7 +15,7 @@ const Comment = ({ comment, onDelete }) => (
         {/* 댓글 ID */}
         {/* <span className={styles.commentAuthor}>{comment.author}</span> */}
         {/* 마우스 호버 시에만 보이는 댓글 ID */}
-        <span className={styles.commentId}>· #{comment.id}</span>
+        <span className={styles.commentId}>#{comment.id}</span>
       </div>
       <div className={styles.headerRight}>
         <span className={styles.commentTimestamp}>{comment.timestamp}</span>
