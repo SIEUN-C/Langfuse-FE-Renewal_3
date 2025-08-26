@@ -1,5 +1,6 @@
 // src/Pages/Tracing/TraceDetailView.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom'; // ReactDOM을 import 합니다.
 import styles from './TraceDetailView.module.css';
 import { Copy, List, Clipboard, Plus, SquarePen, ChevronDown, MessageSquare, Info } from 'lucide-react';
 import Toast from '../../components/Toast/Toast';
@@ -46,10 +47,11 @@ const TraceDetailView = ({ details, isLoading, error }) => {
   const [toastInfo, setToastInfo] = useState({ isVisible: false, message: '' });
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-
-  const [usageTooltip, setUsageTooltip] = useState({ visible: false, style: {}, data: null });
-  const usagePillRef = useRef(null);
   
+  // 툴팁 관련 상태는 그대로 유지
+  const [usageTooltip, setUsageTooltip] = useState({ visible: false, style: {}, data: null });
+  // usagePillRef는 더 이상 필요 없으므로 삭제합니다.
+
   const isObservation = details && 'type' in details && 'traceId' in details;
   const objectType = isObservation ? 'OBSERVATION' : 'TRACE';
   const projectId = details?.projectId;
@@ -94,24 +96,25 @@ const TraceDetailView = ({ details, isLoading, error }) => {
       });
   };
 
-  //   --- 툴팁 표시 핸들러 ---
-  const handleUsageMouseEnter = (usageData) => {
-    if (usagePillRef.current) {
-      const rect = usagePillRef.current.getBoundingClientRect();
-      setUsageTooltip({
-        visible: true,
-        style: {
-          top: `${rect.top - 12}px`,
-          left: `${rect.left + rect.width / 2}px`,
-          transform: 'translate(-50%, -100%)',
-          opacity: 1,
-        },
-        data: usageData,
-      });
-    }
+  // --- 툴팁 표시 핸들러 수정 ---
+  const handleUsageMouseEnter = (event, usageData) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setUsageTooltip({
+      visible: true,
+      style: {
+        // 버튼의 아래쪽(bottom)을 기준으로 top 위치 설정 + 약간의 여백(8px)
+        top: `${rect.bottom + 8}px`, 
+        // 버튼의 가로 중앙에 위치하도록 left와 transform 설정
+        left: `${rect.left + rect.width / 2}px`,
+        transform: 'translateX(-50%)',
+        opacity: 1,
+      },
+      data: usageData,
+    });
   };
 
-  // --- 툴팁 숨김 핸들러 ---
+
+  // --- 툴팁 숨김 핸들러 수정 ---
   const handleUsageMouseLeave = () => {
     setUsageTooltip(prev => ({ ...prev, visible: false, style: { ...prev.style, opacity: 0 } }));
   };
@@ -157,7 +160,6 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     return date.toISOString().replace('T', ' ').substring(0, 23);
   };
 
-  // API의 usage 객체를 받아 포맷팅하도록 수정
   const formatUsage = (usage) => {
     if (!usage || (usage.input == null && usage.output == null)) return null;
     const input = usage.input ?? 0;
@@ -173,9 +175,11 @@ const TraceDetailView = ({ details, isLoading, error }) => {
         isVisible={toastInfo.isVisible}
         onClose={() => setToastInfo({ isVisible: false, message: '' })}
       />
-      {/* Usage 툴팁 렌더링 */}
-      {usageTooltip.visible && (
-        <UsageBreakdown usage={usageTooltip.data} style={usageTooltip.style} />
+
+      {/* ▼▼▼ 툴팁을 Portal을 사용해 렌더링하도록 수정 ▼▼▼ */}
+      {usageTooltip.visible && ReactDOM.createPortal(
+        <UsageBreakdown usage={usageTooltip.data} style={usageTooltip.style} />,
+        document.body
       )}
       
       <div className={styles.infoBar}>
@@ -233,19 +237,17 @@ const TraceDetailView = ({ details, isLoading, error }) => {
               </div>
               
               <div className={styles.costBar}>
-                {/* totalPrice가 있으면 표시 */}
                 {details.totalPrice != null && (
                   <div className={styles.costPill}>
                     ${details.totalPrice.toFixed(6)}
                     <Info size={14} className={styles.infoIcon} />
                   </div>
                 )}
-                {/* usage 데이터가 있으면 툴팁과 함께 표시 */}
+                {/* ▼▼▼ onMouseEnter 핸들러에 event 객체(e) 전달 ▼▼▼ */}
                 {details.usage && formatUsage(details.usage) && (
                   <div 
-                    ref={usagePillRef}
                     className={styles.costPill}
-                    onMouseEnter={() => handleUsageMouseEnter(details.usage)}
+                    onMouseEnter={(e) => handleUsageMouseEnter(e, details.usage)}
                     onMouseLeave={handleUsageMouseLeave}
                   >
                     {formatUsage(details.usage)}
@@ -294,11 +296,11 @@ const TraceDetailView = ({ details, isLoading, error }) => {
                     <Info size={14} className={styles.infoIcon} />
                   </div>
                 )}
+                {/* ▼▼▼ onMouseEnter 핸들러에 event 객체(e) 전달 ▼▼▼ */}
                 {details.usage && formatUsage(details.usage) && (
-                  <div 
-                    ref={usagePillRef}
+                  <div
                     className={styles.costPill}
-                    onMouseEnter={() => handleUsageMouseEnter(details.usage)}
+                    onMouseEnter={(e) => handleUsageMouseEnter(e, details.usage)}
                     onMouseLeave={handleUsageMouseLeave}
                   >
                     {formatUsage(details.usage)}
