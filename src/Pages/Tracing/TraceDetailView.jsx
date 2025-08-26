@@ -1,5 +1,5 @@
 // src/Pages/Tracing/TraceDetailView.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styles from './TraceDetailView.module.css';
 import { Copy, List, Clipboard, Plus, SquarePen, ChevronDown, MessageSquare, Info } from 'lucide-react';
 import Toast from '../../components/Toast/Toast';
@@ -7,8 +7,9 @@ import SidePanel from '../../components/SidePanel/SidePanel';
 import Comments from '../../components/Comments/Comments';
 import AddToDatasetModal from '../../components/AddToDatasetModal/AddToDatasetModal';
 import { useComments } from '../../hooks/useComments';
+import UsageBreakdown from './UsageBreakdown';
 
-// FormattedTable 컴포넌트
+// FormattedTable 컴포넌트 (변경 없음)
 const FormattedTable = ({ data }) => {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     return <pre>{data}</pre>;
@@ -46,12 +47,13 @@ const TraceDetailView = ({ details, isLoading, error }) => {
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
 
+  const [usageTooltip, setUsageTooltip] = useState({ visible: false, style: {}, data: null });
+  const usagePillRef = useRef(null);
+  
   const isObservation = details && 'type' in details && 'traceId' in details;
   const objectType = isObservation ? 'OBSERVATION' : 'TRACE';
-  const projectId = details?.projectId; // projectId 추출
+  const projectId = details?.projectId;
   
-  // useComments 훅을 사용하여 댓글 관련 상태와 함수를 가져옵니다.
-  // [수정] useComments 훅에 projectId 전달
   const {
     comments,
     isLoading: isCommentsLoading,
@@ -60,7 +62,6 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     removeComment,
   } = useComments(projectId, objectType, details?.id);
 
-  // 댓글 추가 핸들러
   const handleAddComment = async (content) => {
     const result = await addComment(content);
     if (result.success) {
@@ -68,10 +69,9 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     } else {
       alert(`오류: ${result.error}`);
     }
-    return result; // [수정] Comments.jsx로 결과를 반환합니다.
+    return result;
   };
 
-  // 댓글 삭제 핸들러
   const handleDeleteComment = async (commentId) => {
     const result = await removeComment(commentId);
     if (result.success) {
@@ -79,7 +79,7 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     } else {
       alert(`오류: ${result.error}`);
     }
-    return result; // [수정] Comments.jsx로 결과를 반환합니다.
+    return result;
   };
 
   const handleCopy = (text, type) => {
@@ -92,6 +92,28 @@ const TraceDetailView = ({ details, isLoading, error }) => {
         console.error("복사에 실패했습니다.", err);
         setToastInfo({ isVisible: true, message: '복사에 실패했습니다.' });
       });
+  };
+
+  //   --- 툴팁 표시 핸들러 ---
+  const handleUsageMouseEnter = (usageData) => {
+    if (usagePillRef.current) {
+      const rect = usagePillRef.current.getBoundingClientRect();
+      setUsageTooltip({
+        visible: true,
+        style: {
+          top: `${rect.top - 12}px`,
+          left: `${rect.left + rect.width / 2}px`,
+          transform: 'translate(-50%, -100%)',
+          opacity: 1,
+        },
+        data: usageData,
+      });
+    }
+  };
+
+  // --- 툴팁 숨김 핸들러 ---
+  const handleUsageMouseLeave = () => {
+    setUsageTooltip(prev => ({ ...prev, visible: false, style: { ...prev.style, opacity: 0 } }));
   };
 
   const renderFormattedContent = (data) => {
@@ -135,12 +157,13 @@ const TraceDetailView = ({ details, isLoading, error }) => {
     return date.toISOString().replace('T', ' ').substring(0, 23);
   };
 
+  // API의 usage 객체를 받아 포맷팅하도록 수정
   const formatUsage = (usage) => {
     if (!usage || (usage.input == null && usage.output == null)) return null;
     const input = usage.input ?? 0;
     const output = usage.output ?? 0;
     const total = usage.total ?? (input + output);
-    return `${input} prompt → ${output} completion (∑ ${total})`;
+    return `${input} → ${output} (∑ ${total})`;
   };
 
   return (
@@ -150,6 +173,11 @@ const TraceDetailView = ({ details, isLoading, error }) => {
         isVisible={toastInfo.isVisible}
         onClose={() => setToastInfo({ isVisible: false, message: '' })}
       />
+      {/* Usage 툴팁 렌더링 */}
+      {usageTooltip.visible && (
+        <UsageBreakdown usage={usageTooltip.data} style={usageTooltip.style} />
+      )}
+      
       <div className={styles.infoBar}>
         <div className={styles.infoBarTop}>
           <div className={styles.infoBarTitle}>
@@ -179,17 +207,6 @@ const TraceDetailView = ({ details, isLoading, error }) => {
                     <Plus size={14} /> Add to datasets
                 </button>
             )}
-            {/* Annotate 버튼 */}
-            {/* {!isObservation && (
-                 <div className={styles.annotateButton}>
-                    <button>
-                        <SquarePen size={14} /> Annotate
-                    </button>
-                    <div className={styles.annotateButtonChevron}>
-                        <ChevronDown size={16} />
-                    </div>
-                </div>
-            )} */}
             <button
               className={`${styles.iconButton} ${styles.actionButtonSecondary}`}
               onClick={() => setIsCommentsOpen(true)}
@@ -213,19 +230,30 @@ const TraceDetailView = ({ details, isLoading, error }) => {
                 <div className={`${styles.pill} ${styles.pillDark}`}>
                   Env: {details.environment ?? 'default'}
                 </div>
+              </div>
+              
+              <div className={styles.costBar}>
+                {/* totalPrice가 있으면 표시 */}
                 {details.totalPrice != null && (
                   <div className={styles.costPill}>
                     ${details.totalPrice.toFixed(6)}
                     <Info size={14} className={styles.infoIcon} />
                   </div>
                 )}
+                {/* usage 데이터가 있으면 툴팁과 함께 표시 */}
                 {details.usage && formatUsage(details.usage) && (
-                  <div className={styles.costPill}>
+                  <div 
+                    ref={usagePillRef}
+                    className={styles.costPill}
+                    onMouseEnter={() => handleUsageMouseEnter(details.usage)}
+                    onMouseLeave={handleUsageMouseLeave}
+                  >
                     {formatUsage(details.usage)}
                     <Info size={14} className={styles.infoIcon} />
                   </div>
                 )}
               </div>
+              
               <div className={styles.pills}>
                 {details.model && (
                   <div className={`${styles.pill} ${styles.pillDark}`}>{details.model}</div>
@@ -266,10 +294,17 @@ const TraceDetailView = ({ details, isLoading, error }) => {
                     <Info size={14} className={styles.infoIcon} />
                   </div>
                 )}
-                <div className={styles.costPill}>
-                  8 → 6 (∑ 14)
-                  <Info size={14} className={styles.infoIcon} />
-                </div>
+                {details.usage && formatUsage(details.usage) && (
+                  <div 
+                    ref={usagePillRef}
+                    className={styles.costPill}
+                    onMouseEnter={() => handleUsageMouseEnter(details.usage)}
+                    onMouseLeave={handleUsageMouseLeave}
+                  >
+                    {formatUsage(details.usage)}
+                    <Info size={14} className={styles.infoIcon} />
+                  </div>
+                )}
               </div>
             </>
           )}
