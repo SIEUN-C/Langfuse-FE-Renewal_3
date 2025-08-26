@@ -8,12 +8,6 @@
   border-left: 1px solid #30363d;
 }
 
-.header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .newCommentSection {
   padding: 16px;
   border-bottom: 1px solid #30363d;
@@ -84,7 +78,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  height: 24px;
+}
+
+.headerLeft, .headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 사용자 이니셜 아이콘 스타일 */
+.authorInitial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #4b5563;
+  color: #e2e8f0;
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  flex-shrink: 0; /* 크기 고정 */
 }
 
 .commentAuthor {
@@ -100,8 +117,47 @@
 .commentBody {
   font-size: 14px;
   line-height: 1.5;
+  padding: 12px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background-color: #010409;
 }
 
 .commentBody p {
   margin: 0;
+}
+
+/* --- 마우스 호버 효과 스타일 --- */
+.commentId,
+.deleteButton {
+  visibility: hidden; /* 기본 상태에서 숨김 */
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.comment:hover .commentId,
+.comment:hover .deleteButton {
+  visibility: visible; /* 마우스 올리면 보임 */
+  opacity: 1;
+}
+
+.commentId {
+  color: #7d8590;
+  font-size: 12px;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  color: #7d8590;
+}
+
+.deleteButton:hover {
+  background-color: rgba(248, 113, 113, 0.1);
+  color: #f87171;
 }

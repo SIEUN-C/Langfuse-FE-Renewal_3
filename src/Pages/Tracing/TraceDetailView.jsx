@@ -1,12 +1,12 @@
 // src/Pages/Tracing/TraceDetailView.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styles from './TraceDetailView.module.css';
 import { Copy, List, Clipboard, Plus, SquarePen, ChevronDown, MessageSquare, Info } from 'lucide-react';
 import Toast from '../../components/Toast/Toast';
-import SidePanel from '../../components/SidePanel/SidePanel'; // SidePanel 임포트
-import Comments from '../../components/Comments/Comments'; // Comments 임포트
-import AddToDatasetModal from '../../components/AddToDatasetModal/AddToDatasetModal'; // AddToDatasetModal 임포트
-import { dummyComments } from '../../data/dummyComments'; // 임시 데이터 임포트
+import SidePanel from '../../components/SidePanel/SidePanel';
+import Comments from '../../components/Comments/Comments';
+import AddToDatasetModal from '../../components/AddToDatasetModal/AddToDatasetModal';
+import { useComments } from '../../hooks/useComments'; // 커스텀 훅 import
 
 // FormattedTable 컴포넌트
 const FormattedTable = ({ data }) => {
@@ -43,57 +43,38 @@ const FormattedTable = ({ data }) => {
 const TraceDetailView = ({ details, isLoading, error }) => {
   const [viewFormat, setViewFormat] = useState('Formatted');
   const [toastInfo, setToastInfo] = useState({ isVisible: false, message: '' });
-  const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false); // AddToDatasetModal 상태 추가
-  // --- 댓글 관련 state 수정 ---
+  const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-  const [comments, setComments] = useState([]); // 초기값을 빈 배열로 변경
-  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
-  const [commentsError, setCommentsError] = useState(null);
 
-  // --- 댓글 패널이 열릴 때 API 호출 ---
-  useEffect(() => {
-    if (isCommentsOpen && details?.id) {
-      const loadComments = async () => {
-        setIsCommentsLoading(true);
-        setCommentsError(null);
-        try {
-          const fetchedComments = await fetchComments({
-            objectType: 'TRACE',
-            objectId: details.id,
-          });
-          setComments(fetchedComments);
-        } catch (err) {
-          setCommentsError(err.message);
-        } finally {
-          setIsCommentsLoading(false);
-        }
-      };
-      loadComments();
-    }
-  }, [isCommentsOpen, details?.id]);
+  const isObservation = details && 'type' in details && 'traceId' in details;
+  const objectType = isObservation ? 'OBSERVATION' : 'TRACE';
+  
+  // useComments 훅을 사용하여 댓글 관련 상태와 함수를 가져옵니다.
+  const {
+    comments,
+    isLoading: isCommentsLoading,
+    error: commentsError,
+    addComment,
+    removeComment,
+  } = useComments(objectType, details?.id);
 
-  // --- 새 댓글 추가 핸들러 (API 연동) ---
+  // 댓글 추가 핸들러
   const handleAddComment = async (content) => {
-    if (!details?.id) return;
+    const result = await addComment(content);
+    if (result.success) {
+      setToastInfo({ isVisible: true, message: '댓글이 추가되었습니다.' });
+    } else {
+      alert(`오류: ${result.error}`);
+    }
+  };
 
-    try {
-      // API 호출하여 새 댓글 생성
-      await createComment({
-        objectType: 'TRACE',
-        objectId: details.id,
-        content,
-      });
-
-      // 댓글 생성 성공 시, 목록을 다시 불러와 갱신
-      const updatedComments = await fetchComments({
-        objectType: 'TRACE',
-        objectId: details.id,
-      });
-      setComments(updatedComments);
-      setToastInfo({ isVisible: true, message: '댓글이 성공적으로 작성되었습니다.' });
-
-    } catch (err) {
-      alert(err.message); // 사용자에게 에러 알림
+  // 댓글 삭제 핸들러
+  const handleDeleteComment = async (commentId) => {
+    const result = await removeComment(commentId);
+    if (result.success) {
+      setToastInfo({ isVisible: true, message: '댓글이 삭제되었습니다.' });
+    } else {
+      alert(`오류: ${result.error}`);
     }
   };
 
@@ -140,7 +121,6 @@ const TraceDetailView = ({ details, isLoading, error }) => {
   if (error) return <div className={styles.body} style={{ color: 'red' }}>{error}</div>;
   if (!details) return <div className={styles.body}>No details available.</div>;
 
-  const isObservation = 'type' in details && ('traceId' in details);
   const metadata = details.metadata ?? {};
   const name = details.name ?? 'N/A';
   const id = details.id;
@@ -323,21 +303,20 @@ const TraceDetailView = ({ details, isLoading, error }) => {
         </div>
       </div>
 
-      {/* SidePanel 및 Comments 렌더링 부분 수정 */}
       <SidePanel
         title="Comments"
         isOpen={isCommentsOpen}
         onClose={() => setIsCommentsOpen(false)}
       >
-        <Comments 
-          comments={comments} 
-          onAddComment={handleAddComment}
+        <Comments
+          comments={comments}
           isLoading={isCommentsLoading}
           error={commentsError}
+          onAddComment={handleAddComment}
+          onDeleteComment={handleDeleteComment}
         />
       </SidePanel>
 
-      {/* AddToDatasetModal 렌더링은 변경 없음 */}
       <AddToDatasetModal
         isOpen={isDatasetModalOpen}
         onClose={() => setIsDatasetModalOpen(false)}
