@@ -7,7 +7,7 @@ import { DataTable } from '../../../components/DataTable/DataTable.jsx';
 import { sessionTableColumns } from './sessionColumns.jsx';
 import FilterButton from '../../../components/FilterButton/FilterButton.jsx';
 import FilterControls from '../../../components/FilterControls/FilterControls';
-import DateRangePicker from '../../../components/DateRange/DateRangePicker.jsx';
+import DateRangePicker from 'components/DateRange/DateRangePicker.jsx';
 import { fetchSessions } from './SessionApi.js';
 
 const Sessions = () => {

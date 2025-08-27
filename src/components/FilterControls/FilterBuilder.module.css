@@ -89,3 +89,27 @@
   margin-left: 8px;
   font-weight: bold;
 }
+
+.dateButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #1e293b;
+  color: #e0e0ff;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  flex-grow: 1; /* 다른 입력창과 너비를 맞춥니다. */
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dateButton:hover {
+  border-color: #4a4a6a;
+}
+
+.dateButton span {
+  color: #8a8a9e;
+}
