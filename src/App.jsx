@@ -12,7 +12,10 @@ import Prompts from './Pages/Prompts/Prompts';
 import PromptsDetail from './Pages/Prompts/PromptsDetail';
 import PromptsNew from './Pages/Prompts/PromptsNew';
 
-// import Playground from './pages/Playground/Playground';
+import Playground from './Pages/Playground/Playground';
+
+// ⭐ 추가: 게이트 컴포넌트 임포트
+import ProjectGate from './components/ProjectId/ProjectGate';
 
 // import JudgePage from './pages/Evaluation/Judge/JudgePage';
 
@@ -47,7 +50,13 @@ export default function App() {
         <Route path="prompts/:id" element={<PromptsDetail />} />
         <Route path="prompts/new" element={<PromptsNew />} />
 
-        {/* <Route path="playground" element={<Playground />} /> */}
+        {/* Playground */}
+        {/* ✅ 표준 경로: URL에서 projectId를 직접 읽어 사용 */}
+        <Route path="project/:projectId/playground" element={<Playground />} />
+
+        {/* ✅ 짧은 경로: 게이트가 projectId를 찾아 표준 경로로 리다이렉트 또는 배너 표시 */}
+        {/* 👇 기존: <Route path="playground" element={<Playground />} /> 를 교체 */}
+        <Route path="playground" element={<ProjectGate />} />
 
         {/* <Route path="llm-as-a-judge" element={<JudgePage />} /> */}
        
