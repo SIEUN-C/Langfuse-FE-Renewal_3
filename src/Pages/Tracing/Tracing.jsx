@@ -1,7 +1,7 @@
 // src/pages/Tracing/Tracing.jsx
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import dayjs from 'dayjs'; // dayjs 임포트
+import dayjs from 'dayjs';
 import styles from './Tracing.module.css';
 import { DataTable } from 'components/DataTable/DataTable';
 import { traceTableColumns } from './traceColumns.jsx';
@@ -10,7 +10,7 @@ import FilterControls from 'components/FilterControls/FilterControls';
 import TraceDetailPanel from './TraceDetailPanel.jsx';
 import { useSearch } from '../../hooks/useSearch.js';
 import { useEnvironmentFilter } from '../../hooks/useEnvironmentFilter.js';
-import { useTimeRangeFilter } from '../../hooks/useTimeRangeFilter'; // 새로 만든 훅 임포트
+import { useTimeRangeFilter } from '../../hooks/useTimeRangeFilter';
 import ColumnVisibilityModal from './ColumnVisibilityModal.jsx';
 import FilterButton from 'components/FilterButton/FilterButton';
 import { Columns, Plus, Edit } from 'lucide-react';
@@ -18,6 +18,7 @@ import { createTrace, updateTrace } from './CreateTrace.jsx';
 import { langfuse } from '../../lib/langfuse';
 import { fetchTraces, deleteTrace } from './TracingApi';
 import { fetchTraceDetails } from './TraceDetailApi';
+import { COLUMN_OPTIONS } from 'components/FilterControls/FilterBuilder';
 
 const Tracing = () => {
   const [activeTab, setActiveTab] = useState('Traces');
@@ -30,6 +31,10 @@ const Tracing = () => {
   const [favoriteState, setFavoriteState] = useState({});
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [pendingTraceId, setPendingTraceId] = useState(null);
+  const [builderFilters, setBuilderFilters] = useState(() => {
+      const initialColumn = COLUMN_OPTIONS[0];
+      return [{ id: 1, column: initialColumn, operator: '=', value: '', metaKey: '' }];
+  });
 
   const allEnvironments = useMemo(() => {
     if (!traces || traces.length === 0) return [];
@@ -37,23 +42,41 @@ const Tracing = () => {
     return uniqueEnvNames.map((name, index) => ({ id: `env-${index}`, name }));
   }, [traces]);
 
-  // useTimeRangeFilter 훅 사용
   const timeRangeFilter = useTimeRangeFilter();
-  
   const { selectedEnvs, ...envFilterProps } = useEnvironmentFilter(allEnvironments);
   const { searchQuery, setSearchQuery, filteredData } = useSearch(traces, searchType);
 
-  // 검색, 환경, 시간 필터를 순차적으로 적용
+  const builderFilterProps = {
+    filters: builderFilters,
+    onFilterChange: setBuilderFilters,
+  };
+
+  const columnMapping = {
+    "ID": "id",
+    "Name": "name",
+    "Timestamp": "timestamp",
+    "User ID": "userId",
+    "Session ID": "sessionId",
+    "Version": "version",
+    "Release": "release",
+    "Tags": "tags",
+    "Input Tokens": "inputTokens",
+    "Output Tokens": "outputTokens",
+    "Total Tokens": "totalTokens",
+    "Latency (s)": "latency",
+    "Input Cost ($)": "inputCost",
+    "Output Cost ($)": "outputCost",
+    "Total Cost ($)": "totalCost",
+    "Environment": "environment"
+  };
+
   const filteredTraces = useMemo(() => {
     let tempTraces = filteredData;
-
-    // 환경 필터 적용
     const selectedEnvNames = new Set(selectedEnvs.map(e => e.name));
     if (selectedEnvNames.size > 0) {
       tempTraces = tempTraces.filter(trace => selectedEnvNames.has(trace.environment));
     }
 
-    // 시간 범위 필터 적용
     const { startDate, endDate } = timeRangeFilter;
     if (startDate && endDate) {
       tempTraces = tempTraces.filter(trace => {
@@ -62,8 +85,56 @@ const Tracing = () => {
       });
     }
 
+    const activeFilters = builderFilters.filter(f => String(f.value).trim() !== '');
+    if (activeFilters.length > 0) {
+        tempTraces = tempTraces.filter(trace => {
+            return activeFilters.every(filter => {
+                const traceKey = columnMapping[filter.column];
+                if (!traceKey) {
+                    alert('해당 columns가 없습니다.');
+                    return true;
+                }
+
+                const traceValue = trace[traceKey];
+                const filterValue = filter.value;
+
+                if (traceValue === null || traceValue === undefined) return false;
+
+                const traceString = String(traceValue).toLowerCase();
+                const filterString = String(filterValue).toLowerCase();
+
+                switch (filter.operator) {
+                    case '=':
+                        return traceString === filterString;
+                    case 'contains':
+                        return traceString.includes(filterString);
+                    case 'does not contain':
+                        return !traceString.includes(filterString);
+                    case 'starts with':
+                        return traceString.startsWith(filterString);
+                    case 'ends with':
+                        return traceString.endsWith(filterString);
+                    case '>':
+                        return Number(traceValue) > Number(filterValue);
+                    case '<':
+                        return Number(traceValue) < Number(filterValue);
+                    case '>=':
+                        return Number(traceValue) >= Number(filterValue);
+                    case '<=':
+                        return Number(traceValue) <= Number(filterValue);
+                    case 'any of':
+                        return filterString.split(',').some(val => traceString.includes(val.trim()));
+                    case 'none of':
+                        return !filterString.split(',').some(val => traceString.includes(val.trim()));
+                    default:
+                        return true;
+                }
+            });
+        });
+    }
+
     return tempTraces;
-  }, [filteredData, selectedEnvs, timeRangeFilter]);
+  }, [filteredData, selectedEnvs, timeRangeFilter, builderFilters]);
 
   const toggleFavorite = useCallback((traceId) => {
     setFavoriteState(prev => ({ ...prev, [traceId]: !prev[traceId] }));
@@ -208,6 +279,7 @@ const Tracing = () => {
               onRefresh={loadTraces}
               envFilterProps={envFilterProps}
               timeRangeFilterProps={timeRangeFilter}
+              builderFilterProps={builderFilterProps}
             />
           </div>
           <div className={styles.filterRightGroup}>

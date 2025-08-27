@@ -6,13 +6,12 @@ import EnvironmentFilter from './EnvironmentFilter';
 import FilterBuilder from './FilterBuilder';
 import RefreshButton from './RefreshButton';
 
-// envFilterProps와 timeRangeFilterProps를 props로 받도록 수정
-const FilterControls = ({ onRefresh, envFilterProps, timeRangeFilterProps }) => {
+const FilterControls = ({ onRefresh, envFilterProps, timeRangeFilterProps, builderFilterProps }) => {
   return (
     <div className={styles.filterControls}>
       <TimeRangeFilter {...timeRangeFilterProps} />
       <EnvironmentFilter {...envFilterProps} />
-      <FilterBuilder />
+      <FilterBuilder {...builderFilterProps} />
       {onRefresh && <RefreshButton onClick={onRefresh} />}
     </div>
   );

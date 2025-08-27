@@ -16,152 +16,143 @@ const COLUMN_TYPE_MAP = {
   string: ["Name", "User ID", "Session ID", "Metadata", "Version", "Release"],
 };
 
-const FilterBuilder = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-  const menuRef = useRef(null);
-  const [datePickerState, setDatePickerState] = useState({ isOpen: false, filterId: null, triggerRef: null });
+const FilterBuilder = ({ filters, onFilterChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+    const menuRef = useRef(null);
+    const [datePickerState, setDatePickerState] = useState({ isOpen: false, filterId: null, triggerRef: null });
 
-  const getOperatorsForColumn = (column) => {
-    if (COLUMN_TYPE_MAP.numeric.includes(column)) return NUMERIC_OPERATORS;
-    if (COLUMN_TYPE_MAP.categorical.includes(column)) return CATEGORICAL_OPERATORS;
-    return STRING_OPERATORS;
-  };
-
-  const [filters, setFilters] = useState(() => {
-    const initialColumn = COLUMN_OPTIONS[0];
-    return [{ id: 1, column: initialColumn, operator: getOperatorsForColumn(initialColumn)[0], value: '', metaKey: '' }];
-  });
-
-  const addFilter = () => {
-    const defaultColumn = COLUMN_OPTIONS[0];
-    const newFilter = { id: Date.now(), column: defaultColumn, operator: getOperatorsForColumn(defaultColumn)[0], value: '', metaKey: '' };
-    setFilters(prev => [...prev, newFilter]);
-  };
-
-  const removeFilter = (id) => {
-    if (filters.length === 1) {
-      const initialColumn = COLUMN_OPTIONS[0];
-      setFilters([{ id: filters[0].id, column: initialColumn, operator: getOperatorsForColumn(initialColumn)[0], value: '', metaKey: '' }]);
-    } else {
-      setFilters(prev => prev.filter(f => f.id !== id));
-    }
-  };
-
-  const updateFilter = (id, field, value) => {
-    setFilters(prev => prev.map(f => {
-      if (f.id !== id) return f;
-      if (field === 'column') {
-        return { ...f, column: value, operator: getOperatorsForColumn(value)[0], value: '' };
-      }
-      return { ...f, [field]: value };
-    }));
-  };
-  
-  const handleOpenDatePicker = (event, filterId) => {
-    setDatePickerState({ isOpen: true, filterId, triggerRef: { current: event.currentTarget } });
-  };
-
-  const handleDateSelect = (date) => {
-    if (datePickerState.filterId) {
-      updateFilter(datePickerState.filterId, 'value', dayjs(date).format('YYYY-MM-DD HH:mm:ss'));
-    }
-  };
-  
-  const closeDatePicker = () => {
-    setDatePickerState({ isOpen: false, filterId: null, triggerRef: null });
-  };
-  
-  const currentFilterDate = useMemo(() => {
-    const filter = filters.find(f => f.id === datePickerState.filterId);
-    return filter?.value ? new Date(filter.value) : new Date();
-  }, [filters, datePickerState.filterId]);
-  
-  // ▼▼▼ 위치 계산 로직 수정 ▼▼▼
-  useEffect(() => {
-    if (!isOpen || !containerRef.current || !menuRef.current) return;
-    const menuElement = menuRef.current;
-    const recalculatePosition = () => {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const menuWidth = menuElement.offsetWidth;
-      const viewportWidth = window.innerWidth;
-      const margin = 16;
-      let newLeft = 0;
-      // 오른쪽 화면 밖으로 나갈 경우
-      if (containerRect.left + newLeft + menuWidth > viewportWidth - margin) {
-        newLeft = viewportWidth - margin - containerRect.left - menuWidth;
-      }
-      // 왼쪽 화면 밖으로 나갈 경우
-      if (containerRect.left + newLeft < margin) {
-        newLeft = margin - containerRect.left;
-      }
-      // DOM에 직접 스타일 적용하여 불필요한 리렌더링 방지
-      menuElement.style.left = `${newLeft}px`;
+    const getOperatorsForColumn = (column) => {
+        if (COLUMN_TYPE_MAP.numeric.includes(column)) return NUMERIC_OPERATORS;
+        if (COLUMN_TYPE_MAP.categorical.includes(column)) return CATEGORICAL_OPERATORS;
+        return STRING_OPERATORS;
     };
-    const resizeObserver = new ResizeObserver(recalculatePosition);
-    resizeObserver.observe(menuElement);
-    recalculatePosition();
-    return () => resizeObserver.disconnect();
-  }, [isOpen]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) setIsOpen(false);
+    const addFilter = () => {
+        const defaultColumn = COLUMN_OPTIONS[0];
+        const newFilter = { id: Date.now(), column: defaultColumn, operator: getOperatorsForColumn(defaultColumn)[0], value: '', metaKey: '' };
+        onFilterChange([...filters, newFilter]);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const activeFilterCount = useMemo(() => filters.filter(f => String(f.value).trim() !== '').length, [filters]);
+    const removeFilter = (id) => {
+        if (filters.length === 1) {
+            const initialColumn = COLUMN_OPTIONS[0];
+            onFilterChange([{ id: filters[0].id, column: initialColumn, operator: getOperatorsForColumn(initialColumn)[0], value: '', metaKey: '' }]);
+        } else {
+            onFilterChange(filters.filter(f => f.id !== id));
+        }
+    };
 
-  return (
-    <div className={styles.container} ref={containerRef}>
-      <FilterButton onClick={() => setIsOpen(!isOpen)}>
-        <Filter size={14} /> Filters
-        {activeFilterCount > 0 && <span className={styles.badge}>{activeFilterCount}</span>}
-      </FilterButton>
+    const updateFilter = (id, field, value) => {
+        onFilterChange(prev => prev.map(f => {
+            if (f.id !== id) return f;
+            if (field === 'column') {
+                return { ...f, column: value, operator: getOperatorsForColumn(value)[0], value: '' };
+            }
+            return { ...f, [field]: value };
+        }));
+    };
 
-      {isOpen && (
-        <div className={styles.dropdownMenu} ref={menuRef}>
-          {filters.map((filter, index) => (
-            <div key={filter.id} className={styles.filterRow}>
-              <span className={styles.conjunction}>{index === 0 ? 'Where' : 'And'}</span>
-              <select className={styles.select} value={filter.column} onChange={e => updateFilter(filter.id, 'column', e.target.value)}>
-                {COLUMN_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              {filter.column === 'Metadata' && (
-                <input type="text" className={styles.input} placeholder="key" value={filter.metaKey} onChange={e => updateFilter(filter.id, 'metaKey', e.target.value)} />
-              )}
-              <select className={styles.select} value={filter.operator} onChange={e => updateFilter(filter.id, 'operator', e.target.value)}>
-                {getOperatorsForColumn(filter.column).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              {filter.column === 'Timestamp' ? (
-                <button className={styles.dateButton} onClick={(e) => handleOpenDatePicker(e, filter.id)}>
-                  <Calendar size={14} />
-                  <span>{filter.value ? dayjs(filter.value).format('YYYY-MM-DD') : 'Pick a date'}</span>
-                </button>
-              ) : (
-                <input type="text" className={styles.input} value={filter.value} placeholder="string" onChange={e => updateFilter(filter.id, 'value', e.target.value)} />
-              )}
-              <button className={styles.removeButton} onClick={() => removeFilter(filter.id)}><X size={16} /></button>
-            </div>
-          ))}
-          <button className={styles.addButton} onClick={addFilter}><Plus size={14} /> Add filter</button>
+    const handleOpenDatePicker = (event, filterId) => {
+        setDatePickerState({ isOpen: true, filterId, triggerRef: { current: event.currentTarget } });
+    };
+
+    const handleDateSelect = (date) => {
+        if (datePickerState.filterId) {
+            updateFilter(datePickerState.filterId, 'value', dayjs(date).format('YYYY-MM-DD HH:mm:ss'));
+        }
+    };
+
+    const closeDatePicker = () => {
+        setDatePickerState({ isOpen: false, filterId: null, triggerRef: null });
+    };
+
+    const currentFilterDate = useMemo(() => {
+        const filter = filters.find(f => f.id === datePickerState.filterId);
+        return filter?.value ? new Date(filter.value) : new Date();
+    }, [filters, datePickerState.filterId]);
+
+    useEffect(() => {
+        if (!isOpen || !containerRef.current || !menuRef.current) return;
+        const menuElement = menuRef.current;
+        const recalculatePosition = () => {
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const menuWidth = menuElement.offsetWidth;
+            const viewportWidth = window.innerWidth;
+            const margin = 16;
+            let newLeft = 0;
+            if (containerRect.left + newLeft + menuWidth > viewportWidth - margin) {
+                newLeft = viewportWidth - margin - containerRect.left - menuWidth;
+            }
+            if (containerRect.left + newLeft < margin) {
+                newLeft = margin - containerRect.left;
+            }
+            menuElement.style.left = `${newLeft}px`;
+        };
+        const resizeObserver = new ResizeObserver(recalculatePosition);
+        resizeObserver.observe(menuElement);
+        recalculatePosition();
+        return () => resizeObserver.disconnect();
+    }, [isOpen]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) setIsOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const activeFilterCount = useMemo(() => filters.filter(f => String(f.value).trim() !== '').length, [filters]);
+
+    return (
+        <div className={styles.container} ref={containerRef}>
+            <FilterButton onClick={() => setIsOpen(!isOpen)}>
+                <Filter size={14} /> Filters
+                {activeFilterCount > 0 && <span className={styles.badge}>{activeFilterCount}</span>}
+            </FilterButton>
+
+            {isOpen && (
+                <div className={styles.dropdownMenu} ref={menuRef}>
+                    {filters.map((filter, index) => (
+                        <div key={filter.id} className={styles.filterRow}>
+                            <span className={styles.conjunction}>{index === 0 ? 'Where' : 'And'}</span>
+                            <select className={styles.select} value={filter.column} onChange={e => updateFilter(filter.id, 'column', e.target.value)}>
+                                {COLUMN_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                            {filter.column === 'Metadata' && (
+                                <input type="text" className={styles.input} placeholder="key" value={filter.metaKey} onChange={e => updateFilter(filter.id, 'metaKey', e.target.value)} />
+                            )}
+                            <select className={styles.select} value={filter.operator} onChange={e => updateFilter(filter.id, 'operator', e.target.value)}>
+                                {getOperatorsForColumn(filter.column).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                            {filter.column === 'Timestamp' ? (
+                                <button className={styles.dateButton} onClick={(e) => handleOpenDatePicker(e, filter.id)}>
+                                    <Calendar size={14} />
+                                    <span>{filter.value ? dayjs(filter.value).format('YYYY-MM-DD') : 'Pick a date'}</span>
+                                </button>
+                            ) : (
+                                <input type="text" className={styles.input} value={filter.value} placeholder="string" onChange={e => updateFilter(filter.id, 'value', e.target.value)} />
+                            )}
+                            <button className={styles.removeButton} onClick={() => removeFilter(filter.id)}><X size={16} /></button>
+                        </div>
+                    ))}
+                    <button className={styles.addButton} onClick={addFilter}><Plus size={14} /> Add filter</button>
+                </div>
+            )}
+
+            {datePickerState.isOpen && (
+                <DateRangePopup
+                    startDate={currentFilterDate}
+                    endDate={currentFilterDate}
+                    setStartDate={handleDateSelect}
+                    setEndDate={handleDateSelect}
+                    onClose={closeDatePicker}
+                    triggerRef={datePickerState.triggerRef}
+                />
+            )}
         </div>
-      )}
-
-      {datePickerState.isOpen && (
-        <DateRangePopup
-          startDate={currentFilterDate}
-          endDate={currentFilterDate}
-          setStartDate={handleDateSelect}
-          setEndDate={handleDateSelect} // 단일 날짜 선택 모드이므로 동일한 핸들러 전달
-          onClose={closeDatePicker}
-          triggerRef={datePickerState.triggerRef}
-        />
-      )}
-    </div>
-  );
+    );
 };
 
 export default FilterBuilder;
