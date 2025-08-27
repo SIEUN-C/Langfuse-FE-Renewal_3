@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import Modal from '../../../components/Modal/Modal';
+import Modal from '../../../components/Modal/Modal.jsx';
 import styles from '../layout/DeleteProjectForm.module.css'; // 새 CSS 파일 import
 
 const DeleteProjectForm = ({

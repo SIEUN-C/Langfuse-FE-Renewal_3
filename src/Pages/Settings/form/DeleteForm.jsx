@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from '../../../components/Modal/Modal';
+import Modal from '../../../components/Modal/Modal.jsx';
 import styles from '../layout/DeleteForm.module.css'; // 전용 스타일 파일
 
 const DeleteForm = ({

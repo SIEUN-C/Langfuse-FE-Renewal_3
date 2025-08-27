@@ -11,7 +11,7 @@ import styles from './layout/Models.module.css';
 
 import CustomPagination from './CustomPagination';
 import ColumnMenu from '../../layouts/ColumnMenu';
-import SidePanel from '../../components/SidePanel/SidePanel';
+import SidePanel from '../../components/SidePanel/SidePanel.jsx'
 import NewModelForm from './form/NewModelForm';
 
 import {

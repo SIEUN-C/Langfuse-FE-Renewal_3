@@ -1,14 +1,14 @@
 import React, {useState, useEffect, useCallback} from 'react';
-import Modal from '../../components/Modal/Modal'
+import Modal from '../../components/Modal/Modal.jsx'
 import NewLLMConnectionForm from "./form/NewLLMConnectionsForm";
 import UpdateLLMConnectionForm from "./form/UpdateLLMConnectionForm";
 import commonStyles from "./layout/SettingsCommon.module.css";
 import llmStyles from './layout/LLMConnections.module.css';
 import {Plus, Pencil, Trash2} from "lucide-react";
 // ---▼ 인증 정보 가져오기 ▼---
-import {publicKey, secretKey} from 'lib/langfuse';
+import {publicKey, secretKey} from '../../lib/langfuse';
 // ---▼ 새로 만든 API 모듈 import ▼---
-import {getLlmConnections, saveLlmConnection, deleteLlmConnection} from '../../api/Settings/LLMApi';
+import {getLlmConnections, saveLlmConnection, deleteLlmConnection} from '../../api/Settings/LLMApi.js';
 import DeleteForm from './form/DeleteForm'
 
 // ---▼ Basic Auth를 위한 Base64 인코딩 ▼---

@@ -94,8 +94,8 @@ const NewModelForm = ({ onSave, onCancel }) => {
     };
 
     return (
-        <div className={styles.formWrapper}>
-            <div className={styles.formContnet}>
+        <div className={formStyles.formWrapper}>
+            <div className={styles.formContent}>
                 { /* --- 헤더 --- */}
                 <div className={styles.formHeader}>
                     <h3>Create Model</h3>
@@ -106,14 +106,14 @@ const NewModelForm = ({ onSave, onCancel }) => {
                 <div className={formStyles.formGroup}>
                     <label htmlFor="model-name" className = { formStyles.formLabel }>Model Name</label>
                     <p className={formStyles.description}>The name of the model. This will be used to reference the model in the API.</p>
-                    <input id="model-name" type="text" value={modelName} onChange={(e) => setModelName(e.target.value)} className={styles.input}/>
+                    <input id="model-name" type="text" value={modelName} onChange={(e) => setModelName(e.target.value)} className={formStyles.formInput}/>
                 </div>
 
                 { /* --- Match Pattern --- */}
                 <div className={formStyles.formGroup}>
                     <label htmlFor="match-pattern" className = { formStyles.formLabel }>Match pattern</label>
                     <p className={formStyles.description}>Regular expression (Postgres syntax)) to match ingested generations.</p>
-                    <input id="match-pattern" type="text" value={matchPattern} onChange={(e) => setMatchPattern(e.target.value)} className={styles.input}/>
+                    <input id="match-pattern" type="text" value={matchPattern} onChange={(e) => setMatchPattern(e.target.value)} className={formStyles.formInput}/>
                 </div>
 
                 { /* --- Prices --- */}
@@ -133,8 +133,8 @@ const NewModelForm = ({ onSave, onCancel }) => {
 
                     {prices.map((p) => (
                         <div key={p.id} className={styles.priceRow}>
-                            <input type="text" value={ p.usageType } onChange={e => handlePriceChange(p.id, 'usageType', e.target.value)} placeholder="Usage type" className={styles.input}/>
-                            <input type="text" value={p.price} onChange={e => handlePriceChange(p.id, 'price', e.target.value)} placeholder="Price" className={styles.input}/>
+                            <input type="text" value={ p.usageType } onChange={e => handlePriceChange(p.id, 'usageType', e.target.value)} placeholder="Usage type" className={formStyles.formInput}/>
+                            <input type="text" value={p.price} onChange={e => handlePriceChange(p.id, 'price', e.target.value)} placeholder="Price" className={formStyles.formInput}/>
                             <button onClick={() => removePriceRow(p.id)} className={styles.deleteButton}><CircleMinus  size={16}/></button>
                         </div>
                     ))}

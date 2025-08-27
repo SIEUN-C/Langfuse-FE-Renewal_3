@@ -8,7 +8,7 @@ import gridStyles from './layout/SettingsGrid.module.css'
 import styles from './layout/Members.module.css'
 import CustomPagination from "./CustomPagination";
 import ColumnMenu from "../../layouts/ColumnMenu";
-import Modal from '../../components/Modal/Modal'
+import Modal from '../../components/Modal/Modal.jsx'
 import NewMemberForm from './form/NewMemberForm'
 
 const DUMMY_MEMBERS_DATA = [
