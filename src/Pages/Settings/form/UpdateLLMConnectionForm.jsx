@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Eye } from 'lucide-react';
-import formStyles from '../layout/Form.module.css'; // 공통 스타일
-import styles from '../layout/NewLLMConnectionForm.module.css'; // 전용 스타일
+import formStyles from '../layout/Form.module.css';
+import styles from '../layout/NewLLMConnectionForm.module.css'; // 스타일은 기존 폼과 공유
 
-const NewLLMConnectionForm = ({ onClose, onSave }) => {
-    // 기본 설정 상태
+const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
+    // 폼 상태 초기화
     const [provider, setProvider] = useState('');
-    const [adapter, setAdapter] = useState('openai');
-    const [apiKey, setApiKey] = useState('');
+    const [adapter, setAdapter] = useState('');
+    const [apiKey, setApiKey] = useState(''); // 새 API 키를 입력받는 상태
+    const [apiKeyPlaceholder, setApiKeyPlaceholder] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
 
     // 고급 설정 상태
@@ -17,41 +18,62 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
     const [enableDefaultModels, setEnableDefaultModels] = useState(true);
     const [customModels, setCustomModels] = useState([]);
 
-    // --- 핸들러 함수들 ---
+    // --- 데이터 불러오기 ---
+    // 컴포넌트가 처음 렌더링될 때 기존 연결 정보로 상태를 설정
+    useEffect(() => {
+        if (existingConnection) {
+            setProvider(existingConnection.provider);
+            setAdapter(existingConnection.adapter);
+            setBaseUrl(existingConnection.baseUrl || '');
+            setEnableDefaultModels(existingConnection.enableDefaultModels ?? true);
+
+            // Placeholder 설정 (예: "•••••••••ttt")
+            setApiKeyPlaceholder(`•••••••••${existingConnection.apiKeyLastChars || ''}`);
+
+            // 객체를 UI에서 사용하는 배열 형태로 변환
+            const headersArray = Object.entries(existingConnection.extraHeaders || {}).map(([key, value]) => ({ id: crypto.randomUUID(), key, value }));
+            setExtraHeaders(headersArray);
+
+            const modelsArray = (existingConnection.customModels || []).map(name => ({ id: crypto.randomUUID(), name }));
+            setCustomModels(modelsArray);
+
+            // 고급 설정 값이 하나라도 있으면 섹션을 열어줌
+            if (existingConnection.baseUrl || headersArray.length > 0 || modelsArray.length > 0) {
+                setShowAdvanced(true);
+            }
+        }
+    }, [existingConnection]);
+
+
+    // --- 핸들러 함수들 --- (기존과 거의 동일)
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        if (!provider || !apiKey) {
-            alert('Provider name과 API Key는 필수 항목입니다.');
-            return;
-        }
 
+        // '새 연결' 폼처럼 모든 데이터를 포함해서 서버로 전송
         const connectionData = {
             adapter,
             provider,
-            apiKey,
+            baseUrl: baseUrl || undefined,
+            enableDefaultModels,
+            extraHeaders: extraHeaders
+                .filter(h => h.key && h.value)
+                .reduce((acc, curr) => ({...acc, [curr.key]: curr.value}), {}),
+            customModels: customModels
+                .filter(m => m.name)
+                .map(m => m.name),
         };
 
-        if (showAdvanced) {
-            connectionData.baseUrl = baseUrl || undefined;
-            connectionData.enableDefaultModels = enableDefaultModels;
-
-            connectionData.extraHeaders = extraHeaders
-                .filter(h => h.key && h.value)
-                .reduce((acc, curr) => {
-                    acc[curr.key] = curr.value;
-                    return acc;
-                }, {});
-
-            connectionData.customModels = customModels
-                .filter(m => m.name)
-                .map(m => m.name);
+        // 단, 새 API 키를 입력했을 때만 apiKey 필드를 추가
+        if (apiKey) {
+            connectionData.apiKey = apiKey;
         }
 
         onSave(connectionData);
     };
 
-    // Extra Headers 리스트 핸들러
+    // Extra Headers, Custom Models 핸들러는 NewLLMConnectionForm과 동일하게 사용
+    // ... (addHeader, removeHeader, addCustomModel 등)
     const handleHeaderChange = (id, field, value) => {
         setExtraHeaders(extraHeaders.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
@@ -61,8 +83,6 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
     const removeHeader = (id) => {
         setExtraHeaders(extraHeaders.filter(item => item.id !== id));
     };
-
-    // Custom Models 리스트 핸들러
     const handleCustomModelChange = (id, value) => {
         setCustomModels(customModels.map(item => item.id === id ? { ...item, name: value } : item));
     };
@@ -73,46 +93,37 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
         setCustomModels(customModels.filter(item => item.id !== id));
     };
 
+
     return (
         <div className={formStyles.formContainer}>
             <form onSubmit={handleSubmit}>
                 <div className={formStyles.formBody}>
-                    {/* Provider name */}
+                    {/* LLM adapter (disabled) */}
+                    <div className={formStyles.formGroup}>
+                        <label htmlFor="llmAdapter" className={formStyles.formLabel}>LLM adapter</label>
+                        <select
+                            id="llmAdapter"
+                            value={adapter}
+                            className={formStyles.formSelect}
+                            disabled // 수정 불가
+                        >
+                            <option value={adapter}>{adapter}</option>
+                        </select>
+                    </div>
+
+                    {/* Provider name (disabled) */}
                     <div className={formStyles.formGroup}>
                         <label htmlFor="providerName" className={formStyles.formLabel}>Provider name</label>
-                        <p className={formStyles.description}>Name to identify the key within Langfuse.</p>
                         <input
                             type="text"
                             id="providerName"
                             value={provider}
-                            onChange={(e) => setProvider(e.target.value)}
                             className={formStyles.formInput}
-                            placeholder="e.g. openai-production"
-                            required
+                            disabled // 수정 불가
                         />
                     </div>
 
-                    {/* LLM adapter */}
-                    <div className={formStyles.formGroup}>
-                        <label htmlFor="llmAdapter" className={formStyles.formLabel}>LLM adapter</label>
-                        <p className={formStyles.description}>Schema that is accepted at that provider endpoint.</p>
-                        <select
-                            id="llmAdapter"
-                            value={adapter}
-                            onChange={(e) => setAdapter(e.g.et.value)}
-                            className={formStyles.formSelect}
-                        >
-                            <option value="openai">openai</option>
-                            <option value="anthropic">anthropic</option>
-                            <option value="azure">azure</option>
-                            <option value="bedrock">bedrock</option>
-                            <option value="google-vertex-ai">google-vertex-ai</option>
-                            <option value="google-ai-studio">google-ai-studio</option>
-                            <option value="custom">custom</option>
-                        </select>
-                    </div>
-
-                    {/* API Key */}
+                    {/* API Key (placeholder) */}
                     <div className={formStyles.formGroup}>
                         <label htmlFor="apiKey" className={formStyles.formLabel}>API Key</label>
                         <p className={formStyles.description}>Your API keys are stored encrypted in your database.</p>
@@ -120,10 +131,10 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
                             <input
                                 type={showApiKey ? "text" : "password"}
                                 id="apiKey"
-                                value={apiKey}
+                                value={apiKey} // 항상 비어있고, 새 키 입력용
                                 onChange={(e) => setApiKey(e.target.value)}
                                 className={formStyles.formInput}
-                                required
+                                placeholder={apiKeyPlaceholder} // 기존 키 정보 표시
                             />
                             <button type="button" onClick={() => setShowApiKey(!showApiKey)} className={styles.iconButton}>
                                 <Eye size={16} />
@@ -131,11 +142,10 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
                         </div>
                     </div>
 
-                    {/* --- 고급 설정 토글 --- */}
+                    {/* 고급 설정 및 나머지 부분은 NewLLMConnectionForm과 동일 */}
                     <div className={styles.advancedToggle} onClick={() => setShowAdvanced(!showAdvanced)}>
                         {showAdvanced ? 'Hide advanced settings ▲' : 'Show advanced settings ▼'}
                     </div>
-
                     {/* --- 고급 설정 섹션 --- */}
                     {showAdvanced && (
                         <div className={styles.advancedSection}>
@@ -201,7 +211,7 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
 
                 <footer className={formStyles.formFooter}>
                     <button type="submit" className={styles.createButton}>
-                        Create connection
+                        Update connection
                     </button>
                 </footer>
             </form>
@@ -209,4 +219,4 @@ const NewLLMConnectionForm = ({ onClose, onSave }) => {
     );
 };
 
-export default NewLLMConnectionForm;
+export default UpdateLLMConnectionForm;

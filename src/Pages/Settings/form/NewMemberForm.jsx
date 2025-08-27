@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import formStyles from './Form.module.css';
+import formStyles from '../layout/Form.module.css';
 
 const NewMemberForm = ({ onClose }) => {
     const [email, setEmail] = useState('');

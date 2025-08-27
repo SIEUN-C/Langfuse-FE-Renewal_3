@@ -1,5 +1,5 @@
 // src/api/commentsApi.js
-import { langfuse } from '../lib/langfuse';
+import { langfuse } from 'lib/langfuse';
 
 /**
  * 특정 객체(Trace, Observation 등)에 대한 댓글 목록을 가져옵니다.

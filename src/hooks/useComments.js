@@ -1,6 +1,6 @@
 // src/hooks/useComments.js
 import { useState, useEffect, useCallback } from 'react';
-import { fetchComments, createComment, deleteComment } from '../api/commentsApi';
+import { fetchComments, createComment, deleteComment } from 'api/components/commentsApi';
 
 /**
  * 댓글 관련 로직을 관리하는 커스텀 훅

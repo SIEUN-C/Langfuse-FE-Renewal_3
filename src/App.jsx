@@ -22,12 +22,12 @@ import PromptsNew from './Pages/Prompts/PromptsNew';
 // import WidgetNew from './pages/Dashboards/WidgetNew';
 
 import SettingsPage from './Pages/Settings/SettingsPage';
-// import General from './pages/Settings/General';
-// import ApiKeys from './pages/Settings/ApiKeys';
-// import LLMConnections from "./pages/Settings/LLMConnections";
-// import Models from './pages/Settings/Models';
-// import Members from './pages/Settings/Members';
-// import Scores from './pages/Settings/Scores';
+import General from './Pages/Settings/General';
+import ApiKeys from './Pages/Settings/ApiKeys';
+import LLMConnections from "./Pages/Settings/LLMConnections";
+import Models from './Pages/Settings/Models';
+import Members from './Pages/Settings/Members';
+import Scores from './Pages/Settings/Scores';
 
 export default function App() {
   
@@ -62,11 +62,11 @@ export default function App() {
         <Route path="dashboards/:dashboardId" element={<DashboardDetail />} /> */}
 
         <Route path="settings" element={<SettingsPage/>}>
-          {/* <Route index element={<General/>}/>
+          <Route index element={<General/>}/>
           <Route path="llm-connections" element={<LLMConnections/>}/>
           <Route path="models" element={<Models/>}/>
           <Route path="scores" element={<Scores/>}/>
-          <Route path="members" element={<Members/>}/> */}
+          <Route path="members" element={<Members/>}/>
         </Route>
        
       </Route>

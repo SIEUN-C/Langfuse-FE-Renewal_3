@@ -56,3 +56,52 @@
 .actionButton:hover {
     color: #ff6b6b;
 }
+
+.confirmModalContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.confirmModalIcon {
+  flex-shrink: 0;
+}
+
+.confirmModalText h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.confirmModalText p {
+  margin: 0;
+  color: #666;
+}
+
+.confirmModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.cancelButton, .archiveButton {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cancelButton {
+  background-color: white;
+  color: #333;
+}
+
+.archiveButton {
+  background-color: #ef4444; /* red-500 */
+  color: white;
+  border-color: #ef4444;
+}

@@ -7,15 +7,16 @@
 
 /* h3 제목 */
 .title {
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 600;
-    margin-bottom: 32px;
+    color: #c3d4e5;
 }
 
 /* p */
 .p {
     margin: 0 0 16px 0;
-    color: #888;
+    color: #c3d4e5;
+    font-size: 13px;
 }
 
 /* 기본 섹션 */
@@ -28,7 +29,7 @@
 }
 
 /* 기본 입력창 */
-input {
+.input {
     width: 100%;
     padding: 8px 12px;
     background-color: #020817;
@@ -39,7 +40,7 @@ input {
     margin-bottom: 16px;
 }
 
-input:focus {
+.input:focus {
     color: #fff;
     outline: 1px solid #4f46e5;
     border-color: #4f46e5;
@@ -107,6 +108,6 @@ input:focus {
 
 .keyHeader {
     background-color: #020817;
-    color: #aaa;
+    color: #c3d4e5;
     font-weight: 500;
 }
