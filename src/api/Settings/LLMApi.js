@@ -85,6 +85,7 @@ export const getDefaultLlmConnection = async (base64Credentials) => {
         return {
             provider: connection.provider,
             model: model,
+            adapter: connection.adapter, // 👈 adapter 정보 추가
         };
     }
     // 설정된 연결이 없으면 null을 반환합니다.

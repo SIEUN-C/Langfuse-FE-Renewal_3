@@ -19,6 +19,7 @@ import { langfuse } from '../../lib/langfuse';
 import { fetchTraces, deleteTrace } from './TracingApi';
 import { fetchTraceDetails } from './TraceDetailApi';
 import { COLUMN_OPTIONS } from 'components/FilterControls/FilterBuilder';
+import { getProjects } from '../../api/Settings/ProjectApi'; // 👈 getProjects 함수를 import 합니다.
 
 const Tracing = () => {
   const [activeTab, setActiveTab] = useState('Traces');
@@ -35,6 +36,26 @@ const Tracing = () => {
       const initialColumn = COLUMN_OPTIONS[0];
       return [{ id: 1, column: initialColumn, operator: '=', value: '', metaKey: '' }];
   });
+
+  const [projectId, setProjectId] = useState(null); // 👈 projectId를 저장할 state 추가
+
+  // 👈 컴포넌트가 마운트될 때 프로젝트 ID를 가져옵니다.
+  useEffect(() => {
+    const fetchProjectId = async () => {
+      try {
+        const projects = await getProjects();
+        if (projects && projects.length > 0) {
+          setProjectId(projects[0].id); // 첫 번째 프로젝트 ID를 상태에 저장
+        } else {
+          setError("프로젝트를 찾을 수 없습니다. Langfuse에서 프로젝트를 먼저 생성해주세요.");
+        }
+      } catch (err) {
+        setError("Project ID를 가져오는 데 실패했습니다.");
+        console.error(err);
+      }
+    };
+    fetchProjectId();
+  }, []); // 빈 배열로 전달하여 한 번만 실행되도록 설정
 
   const allEnvironments = useMemo(() => {
     if (!traces || traces.length === 0) return [];
@@ -174,7 +195,12 @@ const Tracing = () => {
   useEffect(() => { loadTraces(); }, []);
 
   const handleCreateClick = async () => {
-    const newTraceId = await createTrace();
+    // 👈 projectId가 있을 때만 createTrace 함수를 호출하고, 인자로 전달합니다.
+    if (!projectId) {
+      alert("Project ID를 아직 가져오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    const newTraceId = await createTrace(projectId); // 👈 projectId 전달
     if (newTraceId) {
       setPendingTraceId(newTraceId);
     }
@@ -230,23 +256,31 @@ const Tracing = () => {
 
     const interval = setInterval(async () => {
       try {
-        await fetchTraceDetails(pendingTraceId);
-        
+        const traceDetails = await fetchTraceDetails(pendingTraceId);
+        if (traceDetails) {
+            clearInterval(interval);
+            setPendingTraceId(null);
+            await loadTraces();
+            console.log(`Trace ${pendingTraceId} has been confirmed and list updated.`);
+        } else {
+            console.log(`Polling for trace ${pendingTraceId}... not found yet.`);
+        }
+      } catch (error) {
         clearInterval(interval);
         setPendingTraceId(null);
-        await loadTraces();
-        console.log(`Trace ${pendingTraceId} has been confirmed and list updated.`);
-
-      } catch (error) {
-        console.log(`Polling for trace ${pendingTraceId}... not found yet.`);
+        console.error("An unexpected error occurred while polling for the trace:", error);
+        alert("Trace를 확인하는 중 예상치 못한 오류가 발생했습니다.");
+        loadTraces();
       }
     }, 2000);
 
     const timeout = setTimeout(() => {
       clearInterval(interval);
-      setPendingTraceId(null);
-      alert(`Trace ${pendingTraceId} 생성 확인에 실패했습니다. 목록을 수동으로 새로고침 해주세요.`);
-      loadTraces();
+      if (pendingTraceId) {
+          setPendingTraceId(null);
+          alert(`Trace ${pendingTraceId} 생성 확인에 실패했습니다. 목록을 수동으로 새로고침 해주세요.`);
+          loadTraces();
+      }
     }, 30000);
 
     return () => {
