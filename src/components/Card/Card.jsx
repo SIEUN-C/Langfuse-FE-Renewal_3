@@ -1,12 +1,6 @@
 import styles from './Card.module.css';
 
-type CardProps = {
-  title: string;
-  onClick?: () => void;
-  children: React.ReactNode;
-};
-
-export default function Card({ title, onClick, children }: CardProps) {
+export default function Card({ title, onClick, children }) {
   return (
     <div
       className={styles.card}

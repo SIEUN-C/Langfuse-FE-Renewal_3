@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import TopFilters from "../../components/TopFilters";
-import DashboardCard from "../../components/Card/Card";
-import TraceChart from "../../components/Chart/TraceChart";
+import DashboardCard from "components/Card/Card";
+import TraceChart from "components/Chart/TraceChart";
 import styles from "./Home.module.css";
 
 export default function Home() {
