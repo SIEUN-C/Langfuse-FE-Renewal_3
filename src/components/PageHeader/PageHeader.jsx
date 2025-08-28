@@ -1,10 +1,11 @@
 import React from "react";
 import { PanelLeft, ChevronDown, Info } from "lucide-react";
 import styles from "./PageHeader.module.css";
+import useProjectId from "hooks/useProjectId";
 
 export default function PageHeader({
   orgName = "Organization",
-  projectName = "Project",
+  projectName = "aaa",
   envBadge = "Hobby",
   title,
   onToggleSidebar,

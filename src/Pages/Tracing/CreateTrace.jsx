@@ -2,111 +2,95 @@
 import { langfuse } from '../../lib/langfuse';
 
 /**
- * Langfuse 문서를 기반으로 새로운 Trace와 그에 속한 Observation들을 생성하는 함수
- * @param {function} callback - Trace 생성 후 실행될 콜백 함수 (예: 목록 새로고침)
+ * input과 output을 받아 Langfuse에 Trace와 Generation(Observation)을 기록하는 함수입니다.
+ * Langfuse 'Settings > Models'에 해당 모델의 비용 정보가 설정되어 있으면 비용이 자동으로 계산됩니다.
+ *
+ * @param {object} params - 기록할 데이터
+ * @param {string} params.input - LLM에 제공된 입력값
+ * @param {string} params.output - LLM으로부터 받은 결과값
+ * @param {string} params.modelName - 사용된 모델 이름 (예: "gpt-3.5-turbo")
+ * @param {string} params.traceName - 생성될 Trace의 이름 (선택 사항)
  */
-export const createTrace = async (callback) => {
+export const logTrace = async ({ input, output, modelName, traceName = "logged-chat" }) => {
   try {
+    // 1. 부모 Trace를 생성합니다. 전체 대화의 입출력을 모두 기록할 수 있습니다.
     const trace = langfuse.trace({
-      name: "chat-app-session-test5",
-      userId: "user_0822",
-      sessionId: "session-l",
-      metadata: { user: "user@wini-tech.com", from: "createTrace function" },
-      tags: ["development", "new-trace"],
-      input: "hello",
-      output: "hi what can i help you",
+      name: traceName,
+      userId: "user_from_log", // 실제 사용자 ID로 교체 필요
+      input: input,
+      output: output,
+      metadata: { source: "manual-log" }
     });
 
-    // --- Observation 생성 로직 추가 ---
-
-    // 1. Event 생성
-    trace.event({
-      name: "get-user-profile",
-      metadata: {
-        attempt: 2,
-        httpRoute: "/api/retrieve-person",
-      },
-      input: {
-        userId: "user__935d7d1d-8625-4ef4-8651-544613e7bd22",
-      },
-      output: {
-        firstName: "Maxine",
-        lastName: "Simons",
-        email: "maxine.simons@langfuse.com",
-      },
+    // 2. Trace 내부에 LLM 상호작용을 나타내는 Generation(Observation)을 생성합니다.
+    //    model 매개변수에 Langfuse에 등록된 모델 이름을 전달하면 비용이 자동 계산됩니다.
+    trace.generation({
+      name: "chat-completion-log",
+      model: modelName,
+      input: [{ role: "user", content: input }], // 비용 계산을 위해 Langfuse가 사용하는 형식
+      output: { role: "assistant", content: output },
     });
 
-    // 2. Span 생성
-    const span = trace.span({
-      name: "embedding-retrieval",
-      input: {
-        userInput: "How does Langfuse work?",
-      },
-    });
-    // Span은 작업이 끝나면 end()를 호출하여 종료합니다.
-    span.end();
-
-    // 3. Generation 생성
-    const generation = trace.generation({
-      name: "chat-completion",
-      model: "gpt-3.5-turbo",
-      modelParameters: {
-        temperature: 0.9,
-        maxTokens: 2000,
-      },
-      input: [{ role: "user", content: "Hello" }],
-    });
-
-    // Generation 종료 시점에 output을 기록합니다.
-    generation.end({
-      output: "안녕하세요!",
-    });
-
-    // ------------------------------------
-
-    // 데이터를 즉시 서버로 전송합니다.
+    // 3. 모든 데이터를 즉시 서버로 전송합니다.
     await langfuse.flush();
 
-    alert(`새로운 Trace 생성 요청이 전송되었습니다. ID: ${trace.id}`);
+    alert(`Trace가 성공적으로 기록되었습니다. ID: ${trace.id}`);
     
-    // 생성된 Trace의 ID를 반환합니다.
     return trace.id;
 
   } catch (error) {
-    console.error("Trace 생성 중 오류 발생:", error);
-    alert("Trace 생성에 실패했습니다. 콘솔을 확인해주세요.");
+    console.error("Trace 기록 중 오류 발생:", error);
+    alert("Trace 기록에 실패했습니다. 콘솔을 확인해주세요.");
     return null;
   }
 };
 
-/**
- * Langfuse 문서를 기반으로 기존 Trace를 업데이트하는 함수
- * @param {object} trace - 업데이트할 Langfuse Trace 객체
- * @param {function} callback - Trace 업데이트 후 실행될 콜백 함수
- */
-export const updateTrace = async (trace, callback) => {
-  if (!trace || !trace.id) {
-    alert("업데이트할 유효한 Trace 객체가 전달되지 않았습니다.");
-    return;
-  }
-  try {
-    trace.update({
-      metadata: {
-        tag: "long-running-test-updated",
-        updatedAt: new Date().toISOString()
-      },
+
+// 이 함수는 Tracing 페이지의 'New Trace' 버튼을 위한 예시 호출 함수입니다.
+// 실제 애플리케이션에서는 사용자의 입력과 LLM의 응답을 동적으로 받아와 logTrace를 호출하게 됩니다.
+export const createTrace = async () => {
+    // 예시 데이터
+    const exampleInput = prompt("Trace에 기록할 Input을 입력하세요:", "What is Langfuse?");
+    if (!exampleInput) return null;
+
+    const exampleOutput = prompt("Trace에 기록할 Output을 입력하세요:", "Langfuse is an open source observability & analytics tool for LLM applications.");
+    if (!exampleOutput) return null;
+
+    // Langfuse의 'Settings > Models'에 등록된 모델 이름을 사용해야 비용이 자동 계산됩니다.
+    const exampleModel = "gpt-3.5-turbo"; 
+
+    return await logTrace({
+        input: exampleInput,
+        output: exampleOutput,
+        modelName: exampleModel,
+        traceName: "example-logged-trace"
     });
-    
-    // 업데이트된 내용도 즉시 전송합니다.
-    await langfuse.flush();
-
-    alert(`Trace가 업데이트되었습니다. ID: ${trace.id}`);
-
-    // 업데이트된 내용도 지연 후 콜백을 실행합니다.
-    await flushAndReloadWithDelay(callback);
-
-  } catch (error) {
-    console.error("Trace 업데이트 중 오류 발생:", error);
-    alert("Trace 업데이트에 실패했습니다. 콘솔을 확인해주세요.");
-  }
 };
+
+// updateTrace 함수는 기존 기능을 유지합니다.
+export const updateTrace = async (trace, callback) => {
+    if (!trace || !trace.id) {
+      alert("업데이트할 유효한 Trace 객체가 전달되지 않았습니다.");
+      return;
+    }
+    try {
+      trace.update({
+        metadata: {
+          tag: "long-running-test-updated",
+          updatedAt: new Date().toISOString()
+        },
+      });
+      
+      await langfuse.flush();
+  
+      alert(`Trace가 업데이트되었습니다. ID: ${trace.id}`);
+  
+      if (callback) {
+          callback();
+      }
+  
+    } catch (error) {
+      console.error("Trace 업데이트 중 오류 발생:", error);
+      alert("Trace 업데이트에 실패했습니다. 콘솔을 확인해주세요.");
+    }
+  };

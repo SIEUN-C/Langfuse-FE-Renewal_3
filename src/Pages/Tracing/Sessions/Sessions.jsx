@@ -1,14 +1,15 @@
 // src/pages/Tracing/Sessions/Sessions.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import styles from './Sessions.module.css';
-import { RefreshCw, Columns } from 'lucide-react';
+import { Columns } from 'lucide-react';
 import ColumnVisibilityModal from '../ColumnVisibilityModal.jsx';
-import { DataTable } from '../../../components/DataTable/DataTable.jsx'; 
+import { DataTable } from '../../../components/DataTable/DataTable.jsx';
 import { sessionTableColumns } from './sessionColumns.jsx';
 import FilterButton from '../../../components/FilterButton/FilterButton.jsx';
 import FilterControls from '../../../components/FilterControls/FilterControls';
 import DateRangePicker from 'components/DateRange/DateRangePicker.jsx';
 import { fetchSessions } from './SessionApi.js';
+import { COLUMN_OPTIONS } from 'components/FilterControls/FilterBuilder'; // COLUMN_OPTIONS import 추가
 
 const Sessions = () => {
     const [sessions, setSessions] = useState([]);
@@ -23,6 +24,12 @@ const Sessions = () => {
     const [endDate, setEndDate] = useState(new Date());
     const [favoriteState, setFavoriteState] = useState({});
     const [selectedRows, setSelectedRows] = useState(new Set());
+
+    // FilterBuilder 상태 추가
+    const [builderFilters, setBuilderFilters] = useState(() => {
+        const initialColumn = COLUMN_OPTIONS[0];
+        return [{ id: 1, column: initialColumn, operator: '=', value: '', metaKey: '' }];
+    });
 
     const loadSessions = async () => {
         try {
@@ -43,6 +50,12 @@ const Sessions = () => {
     };
 
     useEffect(() => { loadSessions(); }, []);
+
+    // builderFilterProps 객체 생성
+    const builderFilterProps = {
+        filters: builderFilters,
+        onFilterChange: setBuilderFilters,
+    };
 
     const toggleFavorite = (sessionId) => {
         setFavoriteState(prev => ({ ...prev, [sessionId]: !prev[sessionId] }));
@@ -85,7 +98,7 @@ const Sessions = () => {
         <div className={styles.container}>
             <div className={styles.filterBar}>
                 <div className={styles.filterLeft}>
-                    <DateRangePicker 
+                    <DateRangePicker
                         startDate={startDate}
                         endDate={endDate}
                         setStartDate={setStartDate}
@@ -93,7 +106,8 @@ const Sessions = () => {
                     />
                 </div>
                 <div className={styles.filterRight}>
-                    <FilterControls onRefresh={loadSessions} />
+                    {/* FilterControls에 builderFilterProps 전달 */}
+                    <FilterControls onRefresh={loadSessions} builderFilterProps={builderFilterProps} />
                     <FilterButton onClick={() => setIsColumnVisibleModalOpen(true)}>
                         <Columns size={16} /> Columns ({visibleColumns.length}/{columns.length})
                     </FilterButton>
