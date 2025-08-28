@@ -11,45 +11,58 @@ const base64Credentials =
 
 /**
  * 'New Trace' 버튼 클릭 시 실행되는 메인 함수입니다.
+ * 사용자에게 상세 정보를 입력받아 실시간으로 LLM을 실행하고 모든 관련 지표를 추적합니다.
  * @param {string} projectId - Trace를 생성할 현재 프로젝트의 ID
+ * @returns {Promise<string|null>} 생성된 Trace의 ID 또는 실패 시 null
  */
 export const createTrace = async (projectId) => {
     try {
+        // 1. 사용자로부터 상세 정보 입력받기
         const userInput = prompt("실행할 Input을 입력하세요:", "What are the benefits of using Langfuse?");
-        if (!userInput) {
-            console.log("Trace creation cancelled by user.");
-            return null;
-        }
+        if (!userInput) return null;
 
+        const sessionId = prompt("Trace에 할당할 Session ID를 입력하세요 (선택 사항):", `session-${Date.now()}`);
+        const tagsInput = prompt("Trace에 할당할 태그를 입력하세요 (쉼표로 구분, 선택 사항):", "realtime-test,frontend-generated");
+        const version = prompt("Trace에 할당할 Version을 입력하세요 (선택 사항):", "1.0.0");
+        const release = prompt("Trace에 할당할 Release를 입력하세요 (선택 사항):", "production-v2");
+        const environment = prompt("Trace에 할당할 Environment를 입력하세요 (선택 사항):", "development");
+        
+        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+
+        // 2. Langfuse에 설정된 기본 LLM Connection 정보 가져오기
         const defaultConnection = await getDefaultLlmConnection(base64Credentials);
         if (!defaultConnection) {
             alert("설정된 LLM Connection이 없습니다. Settings 메뉴에서 먼저 추가해주세요.");
             return null;
         }
 
-        // ▼▼▼ Trace에 추가할 메타데이터를 변수로 정의합니다. ▼▼▼
         const traceMetadata = { 
             source: "Create Trace Button",
-            environment: "development"
+            environment: environment || undefined,
         };
-
-        // 부모 Trace를 생성합니다.
+        
+        // 3. 클라이언트에서 먼저 Trace의 뼈대를 생성합니다. (이전의 안정적인 방식으로 복귀)
         const trace = langfuse.trace({
-            name: "realtime-llm-execution",
+            name: "realtime-llm-execution-final",
             userId: "user_realtime_test",
+            sessionId: sessionId || undefined,
             input: userInput,
-            tags: ["realtime-test", defaultConnection.model],
-            metadata: traceMetadata, // 로컬 Trace 객체에도 메타데이터를 설정합니다.
+            tags: tags,
+            version: version || undefined,
+            release: release || undefined,
+            metadata: traceMetadata,
         });
 
-        // Playground와 동일한 '/api/chatCompletion' 엔드포인트로 LLM 실행 요청
+        // 4. Latency 측정을 시작하고, 백엔드에 LLM 실행 및 'Generation' 생성을 요청합니다.
+        const startTime = Date.now();
+
         const response = await fetch('/api/chatCompletion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
                 projectId: projectId,
-                traceId: trace.id,
+                traceId: trace.id, // 생성된 Trace의 ID를 전달하여 Generation을 연결
                 messages: [{ type: 'user', role: 'user', content: userInput }],
                 modelParams: {
                     provider: defaultConnection.provider,
@@ -58,24 +71,32 @@ export const createTrace = async (projectId) => {
                     temperature: 0.7,
                 },
                 streaming: false,
-                metadata: traceMetadata, // 👈 백엔드로 메타데이터를 전달합니다.
             }),
         });
+        
+        const endTime = Date.now();
+        const latencyInSeconds = (endTime - startTime) / 1000;
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `API Error: ${response.status} ${response.statusText}`);
+            const errorMessage = errorData.error?.message || errorData.message || `API Error: ${response.status} ${response.statusText}`;
+            throw new Error(errorMessage);
         }
         
         const completion = await response.json();
 
+        // 5. 백엔드로부터 받은 결과와 직접 측정한 Latency로 클라이언트의 Trace 정보를 최종 업데이트합니다.
         trace.update({
             output: completion.content || "No output received.",
+            latency: latencyInSeconds,
         });
 
+        // 6. 모든 데이터를 Langfuse 서버로 전송합니다.
         await langfuse.flush();
 
         alert(`실시간 실행 및 추적이 완료되었습니다. Trace ID: ${trace.id}`);
+        
+        // 7. Polling을 시작할 수 있도록 생성된 Trace ID를 반환합니다.
         return trace.id;
 
     } catch (error) {
