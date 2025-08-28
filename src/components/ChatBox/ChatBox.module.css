@@ -1,5 +1,4 @@
-/* PromptsNew.module.css와 Playground.module.css의 관련 스타일을 통합 */
-
+/* 기존 유지 */
 .chatEditor {
   display: flex;
   flex-direction: column;
@@ -9,18 +8,40 @@
   border-radius: 6px;
   padding: 12px;
 }
+
+.hint {
+  font-size: 13px;
+  color: #94a3b8;
+  background: #0b1220;
+  border: 1px dashed #334155;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+/* 행을 grid로 바꿔 정렬을 안정화(라벨/입력/X 정렬) */
 .messageRow {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 28px 130px 1fr 34px;
+  /* 드래그, 역할, 입력, 삭제 */
+  align-items: start;
   gap: 8px;
 }
+
 .dragHandleWrapper {
-    cursor: move;
-    padding-top: 6px; /* 아이콘 위치 조절 */
+  cursor: move;
+  padding-top: 6px;
 }
+
 .dragHandle {
   color: #64748b;
 }
+
+.roleCol {
+  display: flex;
+  align-items: center;
+  height: 36px;
+}
+
 .roleSelect {
   background-color: #0f172a;
   border: 1px solid #334155;
@@ -28,21 +49,26 @@
   color: #cbd5e1;
   font-size: 13px;
   padding: 6px 8px;
-  width: 110px;
+  width: 100%;
 }
+
 .placeholderRole {
   background-color: #0f172a;
   border: 1px solid #334155;
-  border-radius: 4px;
+  border-radius: 9999px;
   color: #cbd5e1;
-  font-size: 13px;
-  padding: 6px 8px;
-  width: 110px;
-  box-sizing: border-box;
+  font-size: 12px;
+  padding: 6px 10px;
   text-align: center;
 }
+
+.inputCol {
+  width: 100%;
+}
+
 .messageTextarea {
-  flex-grow: 1;
+  width: 100%;
+  min-height: 36px;
   background-color: #0f172a;
   border: 1px solid #334155;
   border-radius: 4px;
@@ -50,35 +76,58 @@
   font-size: 14px;
   padding: 6px 10px;
   resize: vertical;
-  min-height: 32px;
 }
+
+/* placeholder는 이름만 입력하니 input 스타일 별도 */
+.placeholderInput {
+  width: 100%;
+  height: 36px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 0 10px;
+}
+
 .removeButton {
   background: none;
-  border: none;
-  color: #64748b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
   cursor: pointer;
-  padding: 6px;
-  margin-top: 2px;
+  height: 36px;
+  width: 34px;
+  display: grid;
+  place-items: center;
+  margin-top: 0;
 }
+
 .removeButton:hover {
   color: #ef4444;
+  background: #0b1220;
 }
+
 .chatActions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
+
 .addBtn {
   background: transparent;
-  border: none;
+  border: 1px solid #334155;
   color: #94a3b8;
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px 10px;
+  border-radius: 9999px;
 }
+
 .addBtn:hover {
   color: #e2e8f0;
+  background: #0b1220;
 }
