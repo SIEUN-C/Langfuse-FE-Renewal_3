@@ -1,0 +1,183 @@
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #1A202C;
+    font-family: sans-serif;
+    color: #E2E8F0;
+}
+
+.loginBox {
+    width: 100%;
+    max-width: 400px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.logo {
+    margin-bottom: 1rem;
+    width: 48px;
+    height: 48px;
+}
+
+.title {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: #E2E8F0;
+    text-align: center;
+}
+
+.form {
+    width: 100%;
+    background-color: #2D3748;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.passwordLabelContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.forgotPassword {
+    font-size: 0.875rem;
+    color: #A0AEC0;
+    text-decoration: none;
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #1A202C;
+    border: 1px solid #4A5568;
+    border-radius: 0.375rem;
+    color: #E2E8F0;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #6366F1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+
+.passwordInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.passwordInputWrapper .input {
+    padding-right: 2.5rem;
+}
+
+.eyeIcon {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #A0AEC0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.signInButton {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #4A5568;
+    border: none;
+    border-radius: 0.375rem;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.signInButton:hover {
+    background-color: #2D3748;
+}
+
+.signInButton:disabled {
+    background-color: #2D3748;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.signUpText {
+    font-size: 0.875rem;
+    color: #A0AEC0;
+}
+
+.signUpLink {
+    color: #6366F1;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.error {
+    color: #FC8181;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+/* Forgot Password Styles */
+.forgotPasswordBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.forgotPasswordTitle {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 600;
+}
+
+.forgotPasswordText {
+    color: #A0AEC0;
+    max-width: 300px;
+}
+
+.buttonGroup {
+    display: flex;
+    flex-direction: column; /* 버튼을 세로로 쌓음 */
+    gap: 1rem;
+    margin-top: 1rem;
+    width: 100%; /* 버튼 그룹이 꽉 차도록 설정 */
+}
+
+.secondaryButton {
+    background-color: #2D3748;
+    border: 1px solid #4A5568;
+    color: #E2E8F0;
+}
+
+.secondaryButton:hover {
+    background-color: #1A202C;
+}

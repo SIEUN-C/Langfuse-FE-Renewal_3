@@ -62,7 +62,7 @@ const NewScoreForm = ({ onClose, onSave }) => {
     };
 
     return (
-        <div className = { formStyles.formContainer }>
+        <div className = { formStyles.formWrapper }>
             {/* form */}
             <form onSubmit = { handleSubmit }>
                 <div className = { formStyles.formBody }>

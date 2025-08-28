@@ -10,7 +10,7 @@ import ColumnMenu from "../../layouts/ColumnMenu";
 import Modal from '../../components/Modal/Modal.jsx'
 import NewScoreForm from './form/NewScoreForm'
 import {publicKey, secretKey, baseUrl} from '../../lib/langfuse'
-import {fetchScoreConfigsAPI, createScoreConfigAPI, updateScoreConfigStatusAPI} from '../../api/Settings/ScoreApi'
+import {fetchScoreConfigsAPI, createScoreConfigAPI, updateScoreConfigStatusAPI} from 'api/Settings/ScoreApi'
 
 // Basic Auth를 위한 Base64 인코딩
 const base64Credentials =
@@ -283,7 +283,7 @@ const Scores = () => {
                 score configs are immutable.</p>
             <div className={gridStyles.header}>
                 {/* Columns 버튼을 div로 감싸서 position 기준점으로 만듦 */}
-                <div ref={columnButtonRef} className={gridStyles.columnsButtonWrapper}
+                <div ref={columnButtonRef}
                      onClick={() => setIsColumnMenuOpen(prev => !prev)}>
                     <button
                         className={`${gridStyles.headerButton} ${gridStyles.columnsButton}`}

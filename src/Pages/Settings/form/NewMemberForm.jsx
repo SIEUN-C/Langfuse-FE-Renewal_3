@@ -13,7 +13,7 @@ const NewMemberForm = ({ onClose }) => {
     };
 
     return (
-        <div className = { formStyles.formContainer }>
+        <div className = { formStyles.formWrapper }>
             {/* Add member */}
             <form onSubmit = { handleSubmit }>
                 <div className = { formStyles.formBody }>

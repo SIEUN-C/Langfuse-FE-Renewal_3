@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import { getProjects } from '../../api/Settings/ProjectApi'
+import { getProjects } from 'api/Settings/ProjectApi'
 import TransferProjectForm from './form/TransferProjectForm';
 import DeleteProjectForm from './form/DeleteProjectForm';
 import commonStyles from "./layout/SettingsCommon.module.css";

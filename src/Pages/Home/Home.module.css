@@ -1,0 +1,55 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+}
+
+/* 타이틀 제거 가능 */
+.title {
+  display: none;
+}
+
+/* 카드 3분할, 반응형 */
+.cardRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+/* TraceChart 섹션 */
+.chartSection {
+  margin-top: 10px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 20px;
+  color: white;
+}
+
+/* 카드 내부 공통 스타일 */
+.metric {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.sub {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.tag {
+  background-color: #4c1d95;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  font-size: 13px;
+}
+
+.button {
+    background-color: #c2d4e5;
+    color: #111;
+}

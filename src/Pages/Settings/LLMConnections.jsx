@@ -8,7 +8,7 @@ import {Plus, Pencil, Trash2} from "lucide-react";
 // ---▼ 인증 정보 가져오기 ▼---
 import {publicKey, secretKey} from '../../lib/langfuse';
 // ---▼ 새로 만든 API 모듈 import ▼---
-import {getLlmConnections, saveLlmConnection, deleteLlmConnection} from '../../api/Settings/LLMApi.js';
+import {getLlmConnections, saveLlmConnection, deleteLlmConnection} from 'api/Settings/LLMApi';
 import DeleteForm from './form/DeleteForm'
 
 // ---▼ Basic Auth를 위한 Base64 인코딩 ▼---

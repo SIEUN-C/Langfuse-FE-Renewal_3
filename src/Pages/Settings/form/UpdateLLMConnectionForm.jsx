@@ -13,7 +13,7 @@ const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
 
     // 고급 설정 상태
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const [baseUrl, setBaseUrl] = useState('');
+    const [baseURL, setBaseURL] = useState('');
     const [extraHeaders, setExtraHeaders] = useState([]);
     const [enableDefaultModels, setEnableDefaultModels] = useState(true);
     const [customModels, setCustomModels] = useState([]);
@@ -24,11 +24,11 @@ const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
         if (existingConnection) {
             setProvider(existingConnection.provider);
             setAdapter(existingConnection.adapter);
-            setBaseUrl(existingConnection.baseUrl || '');
-            setEnableDefaultModels(existingConnection.enableDefaultModels ?? true);
+            setBaseURL(existingConnection.baseURL || '');
+            setEnableDefaultModels(existingConnection.withDefaultModels ?? true);
 
-            // Placeholder 설정 (예: "•••••••••ttt")
-            setApiKeyPlaceholder(`•••••••••${existingConnection.apiKeyLastChars || ''}`);
+            // Placeholder 설정
+            setApiKeyPlaceholder(existingConnection.displaySecretKey || ''); // 'displaySecretKey'로 수정
 
             // 객체를 UI에서 사용하는 배열 형태로 변환
             const headersArray = Object.entries(existingConnection.extraHeaders || {}).map(([key, value]) => ({ id: crypto.randomUUID(), key, value }));
@@ -38,7 +38,7 @@ const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
             setCustomModels(modelsArray);
 
             // 고급 설정 값이 하나라도 있으면 섹션을 열어줌
-            if (existingConnection.baseUrl || headersArray.length > 0 || modelsArray.length > 0) {
+            if (existingConnection.baseURL || headersArray.length > 0 || modelsArray.length > 0) {
                 setShowAdvanced(true);
             }
         }
@@ -50,23 +50,26 @@ const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        // '새 연결' 폼처럼 모든 데이터를 포함해서 서버로 전송
         const connectionData = {
             adapter,
             provider,
-            baseUrl: baseUrl || undefined,
+            baseURL: baseURL || undefined,
             enableDefaultModels,
             extraHeaders: extraHeaders
                 .filter(h => h.key && h.value)
-                .reduce((acc, curr) => ({...acc, [curr.key]: curr.value}), {}),
+                .reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {}),
             customModels: customModels
                 .filter(m => m.name)
                 .map(m => m.name),
         };
 
-        // 단, 새 API 키를 입력했을 때만 apiKey 필드를 추가
+        // 사용자가 새 API 키를 입력하면 그 값을 사용하고,
+        // 입력하지 않았으면 기존의 마스킹된 키 값을 'secretKey'로 보냄
         if (apiKey) {
             connectionData.apiKey = apiKey;
+        } else {
+            // "키를 변경하지 않음"의 의미로 기존 displaySecretKey를 전송
+            connectionData.apiKey = existingConnection.displaySecretKey;
         }
 
         onSave(connectionData);
@@ -95,7 +98,7 @@ const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
 
 
     return (
-        <div className={formStyles.formContainer}>
+        <div className={formStyles.formWrapper}>
             <form onSubmit={handleSubmit}>
                 <div className={formStyles.formBody}>
                     {/* LLM adapter (disabled) */}
@@ -151,13 +154,13 @@ const UpdateLLMConnectionForm = ({ existingConnection, onClose, onSave }) => {
                         <div className={styles.advancedSection}>
                             {/* API Base URL */}
                             <div className={formStyles.formGroup}>
-                                <label htmlFor="baseUrl" className={formStyles.formLabel}>API Base URL</label>
+                                <label htmlFor="baseURL" className={formStyles.formLabel}>API Base URL</label>
                                 <p className={formStyles.description}>Leave blank to use the default base URL for the given LLM adapter. OpenAI default: https://api.openai.com/v1</p>
                                 <input
                                     type="text"
-                                    id="baseUrl"
-                                    value={baseUrl}
-                                    onChange={(e) => setBaseUrl(e.target.value)}
+                                    id="baseURL"
+                                    value={baseURL}
+                                    onChange={(e) => setBaseURL(e.target.value)}
                                     className={formStyles.formInput}
                                     placeholder="default" /* GIF에 맞춰 placeholder 수정 */
                                 />

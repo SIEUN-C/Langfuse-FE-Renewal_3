@@ -163,7 +163,7 @@ const Members = () => {
         <div className = { commonStyles.container }>
             <h3 className={commonStyles.title}>Project Members</h3>
             <div className = { gridStyles.header }>
-                <div ref = { columnButtonRef } className = { gridStyles.columnsButtonWrapper } onClick={() => setIsColumnMenuOpen(prev => !prev)}>
+                <div ref = { columnButtonRef } onClick={() => setIsColumnMenuOpen(prev => !prev)}>
                     <button
                         className = { `${ gridStyles.headerButton } ${ gridStyles.columnsButton }` }
                     >

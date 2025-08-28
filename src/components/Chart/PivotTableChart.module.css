@@ -1,0 +1,47 @@
+.tableContainer {
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* 내용이 많을 경우 스크롤 생성 */
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.pivotTable {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap; /* 셀 내용이 줄바꿈되지 않도록 설정 */
+}
+
+.headerCell,
+.rowHeaderCell,
+.dataCell {
+  padding: 8px 12px;
+  border: 1px solid #334155;
+  text-align: left;
+}
+
+.headerCell {
+  background-color: #1e293b;
+  font-weight: 600;
+  position: sticky; /* 헤더 고정 */
+  top: 0;
+  z-index: 2;
+}
+
+.rowHeaderCell {
+  background-color: #1e293b;
+  font-weight: 600;
+  position: sticky; /* 행 헤더 고정 */
+  left: 0;
+  z-index: 1;
+}
+
+.dataCell {
+  text-align: right;
+  font-family: monospace;
+}
+
+/* 짝수 행에 약간 다른 배경색 적용 */
+.pivotTable tbody tr:nth-child(even) {
+  background-color: #1e293b;
+}

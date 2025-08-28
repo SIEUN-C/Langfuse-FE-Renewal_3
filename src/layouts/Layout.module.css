@@ -1,45 +1,46 @@
 .layout {
-  display: flex;
-  width: 100%;
-  height: 100vh;
-  background-color: #020817;
-  overflow: hidden;
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    background-color: #020817;
+    overflow: hidden;
 }
 
 .sidebar {
-  width: 200px;
-  background-color: #020817;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  transition: width 0.3s ease;
+    width: 200px;
+    background-color: #020817;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: width 0.3s ease;
     border-right: 1px solid #1e293b;
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .sidebar {
-    transition: none;
-  }
+    .sidebar {
+        transition: none;
+    }
 }
 
 .sidebarCollapsed {
-  width: 60px;
+    width: 60px;
 }
 
 /* [1] 상단 고정 영역 */
 .header {
-  padding: 12px 16px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
 }
 
 .logoText {
-  font-size: 15px;
-  font-weight: bold;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    font-size: 15px;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
     padding-bottom: 12px;
     border-bottom: 1px solid #1e293b;
@@ -53,24 +54,24 @@
 }
 
 .toggleButton {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 4px;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px;
 }
 
 .searchBox {
-  /* margin-top: 12px; */
-  display: flex;
-  align-items: center;
+    /* margin-top: 12px; */
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-  gap: 6px;
-  padding: 6px 10px;
-  background-color: #020817;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #cbd5e1;
+    gap: 6px;
+    padding: 6px 10px;
+    background-color: #020817;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #cbd5e1;
 }
 
 .searchBox:hover {
@@ -94,92 +95,128 @@
 
 /* [2] 스크롤 가능한 메뉴 영역 */
 .menuWrapper {
-  flex-grow: 1;
-  overflow-y: auto;
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
 /* 커스텀 스크롤바 (WebKit/Chromium) */
 .menuWrapper::-webkit-scrollbar {
-  width: 8px;
+    width: 8px;
 }
+
 .menuWrapper::-webkit-scrollbar-thumb {
-  background: #1f2a44;
-  border-radius: 6px;
+    background: #1f2a44;
+    border-radius: 6px;
 }
+
 .menuWrapper::-webkit-scrollbar-thumb:hover {
-  background: #2a3a5c;
+    background: #2a3a5c;
 }
+
 .menuWrapper::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 .menu {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .sectionTitle {
-  font-size: 11px;
-  color: #94a3b8;
-  padding: 6px 16px 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 6px 16px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .sectionDivider {
-  height: 6px;
+    height: 6px;
 }
 
 .menuItem {
-  position: relative;
-  padding: 8px 14px 8px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  color: white;
-  text-decoration: none;
-  font-size: 13px;
-  transition: background 0.2s ease;
+    position: relative;
+    padding: 8px 14px 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: white;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.2s ease;
     border-radius: 6px;
 }
 
 .menuItem:hover {
-  background-color: #223049;
+    background-color: #223049;
 
 }
 
 /* ✅ NavLink 활성 상태 */
 .active {
-  background-color: #1e293b;
+    background-color: #1e293b;
 }
 
 /* 왼쪽 하이라이트 바 */
 .active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  background-color: #60a5fa;
-  border-radius: 2px;
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    background-color: #60a5fa;
+    border-radius: 2px;
 }
 
 /* 키보드 포커스 시 접근성 강화 */
 .menuItem:focus-visible {
-  outline: 2px solid #64748b;
-  outline-offset: 2px;
+    outline: 2px solid #64748b;
+    outline-offset: 2px;
 }
 
 .iconOnly {
-  justify-content: center;
+    justify-content: center;
 }
 
 /* [3] 하단 고정 영역 */
 .bottomMenu {
-  padding: 8px 0;
+    padding: 8px 0;
+}
+
+/* 메인 콘텐츠 */
+.mainContainer {
+    flex-grow: 1;
+    height: 100vh;
+    overflow-y: auto;
+    background-color: #020817;
+    /* padding: 24px; */
+}
+
+/* 헤더에 올라가는 흰색 버튼 */
+.headerActionPrimary {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a; /* slate-900 */
+    border: 1px solid #cbd5e1; /* slate-300 */
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset;
+}
+
+.headerActionPrimary:hover {
+    filter: brightness(0.98);
+}
+
+/* [추가] 사용자 메뉴 관련 스타일 */
+.userMenuContainer {
+  position: relative; /* 팝업의 기준점이 됨 */
 }
 
 .userInfo {
@@ -189,35 +226,140 @@
   gap: 10px;
   font-size: 12px;
   border-top: 1px solid #1e293b;
+  cursor: pointer; /* 클릭 가능하도록 커서 변경 */
+  transition: background-color 0.2s;
+}
+
+.userInfo:hover {
+  background-color: #1e293b;
 }
 
 .userAvatar {
   width: 24px;
   height: 24px;
   border-radius: 50%;
+  background-color: #334155; /* 임시 배경색 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
 }
 
 .userText {
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
 }
 
 .userName {
   font-size: 13px;
+  font-weight: 500;
 }
 
 .userEmail {
   font-size: 11px;
-  opacity: 0.6;
+  color: #94a3b8;
 }
 
-/* 메인 콘텐츠 */
-.mainContainer {
-  flex-grow: 1;
-  height: 100vh;
-  overflow-y: auto;
-  background-color: #020817;
-  /* ▼▼▼ 아래 두 줄을 추가합니다. ▼▼▼ */
-  position: relative;
-  z-index: 1;
+.userMenuToggle {
+  color: #94a3b8;
+}
+
+/* 팝업 메뉴 스타일 */
+.userMenuPopover {
+  position: absolute;
+  bottom: 100%; /* 사용자 정보 바 바로 위에 위치 */
+  left: 8px;
+  right: 8px;
+  margin-bottom: 8px; /* 약간의 간격 */
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popoverSection {
+  padding: 4px 0;
+}
+.popoverSection:not(:last-child) {
+  border-bottom: 1px solid #334155;
+}
+
+.popoverUserInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+}
+
+.popoverAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background-color: #4b5569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.popoverUserText {
+  display: flex;
+  flex-direction: column;
+}
+.popoverUserName {
+  font-size: 14px;
+  font-weight: 500;
+}
+.popoverUserEmail {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.themeOptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.themeOptions > div {
+  display: flex;
+  gap: 4px;
+}
+
+.themeOptions button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.themeOptions button:hover {
+  background-color: #334155;
+  color: #e2e8f0;
+}
+
+.signOutButton {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  padding: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.signOutButton:hover {
+  background-color: #334155;
 }

@@ -1,6 +1,6 @@
 // src/Pages/Tracing/CreateTrace.jsx
 import { langfuse } from '../../lib/langfuse';
-import { getDefaultLlmConnection } from '../../api/Settings/LLMApi';
+import { getLlmConnections } from 'api/Settings/LLMApi';
 import { publicKey, secretKey } from '../../lib/langfuse';
 
 // Basic Auth를 위한 Base64 인코딩
@@ -30,7 +30,7 @@ export const createTrace = async (projectId) => {
         const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
 
         // 2. Langfuse에 설정된 기본 LLM Connection 정보 가져오기
-        const defaultConnection = await getDefaultLlmConnection(base64Credentials);
+        const defaultConnection = await getLlmConnections(base64Credentials);
         if (!defaultConnection) {
             alert("설정된 LLM Connection이 없습니다. Settings 메뉴에서 먼저 추가해주세요.");
             return null;
