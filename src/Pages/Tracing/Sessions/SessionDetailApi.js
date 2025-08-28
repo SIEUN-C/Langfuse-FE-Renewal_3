@@ -1,4 +1,5 @@
 // src/pages/Tracing/Sessions/SessionDetailApi.js
+// https://api.reference.langfuse.com/#tag/sessions/get/api/public/sessions/{sessionId}
 import { langfuse } from 'lib/langfuse';
 
 // API 응답값을 UI에 표시하기 안전한 문자열로 변환

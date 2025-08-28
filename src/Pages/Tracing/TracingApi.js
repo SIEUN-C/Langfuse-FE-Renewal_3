@@ -1,4 +1,5 @@
 // src/pages/Tracing/TracingApi.js
+//https://api.reference.langfuse.com/#tag/trace/get/api/public/traces
 import { langfuse } from '../../lib/langfuse';
 
 /**
@@ -51,6 +52,7 @@ export const fetchTraces = async () => {
   }
 };
 
+//https://api.reference.langfuse.com/#tag/trace/delete/api/public/traces/{traceId}
 /**
  * ID를 기반으로 트레이스를 삭제합니다.
  * @param {string} traceId - 삭제할 트레이스의 ID

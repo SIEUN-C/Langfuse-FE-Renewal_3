@@ -1,4 +1,5 @@
 // src/pages/Tracing/TraceDetailApi.js
+// https://api.reference.langfuse.com/#tag/trace/get/api/public/traces/{traceId}
 import { langfuse } from '../../lib/langfuse';
 
 /**
