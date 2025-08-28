@@ -1,5 +1,4 @@
 // src/pages/Tracing/TracingApi.js
-//https://api.reference.langfuse.com/#tag/trace/get/api/public/traces
 import { langfuse } from '../../lib/langfuse';
 
 /**
@@ -28,7 +27,9 @@ export const fetchTraces = async () => {
 
     return apiResponse.data.map(trace => ({
       id: trace.id,
-      timestamp: new Date(trace.timestamp).toLocaleString(),
+      // [수정됨] toLocaleString()을 제거하고, 파싱하기 쉬운 원본 ISO 형식의 timestamp를 그대로 전달합니다.
+      // 이것이 "내 컴퓨터에선 되는데" 문제의 핵심 원인이었습니다.
+      timestamp: trace.timestamp,
       name: trace.name ?? 'N/A',
       input: formatTraceValue(trace.input),
       output: formatTraceValue(trace.output),
@@ -38,21 +39,21 @@ export const fetchTraces = async () => {
       version: trace.version ?? 'N/A',
       tags: trace.tags ?? [],
       isFavorited: false,
-      observations: Array.isArray(trace.observations) ? trace.observations.length : 0, // observation 개수 반영
+      observations: Array.isArray(trace.observations) ? trace.observations.length : 0,
       env: trace.environment ?? 'default',
       latency: trace.latency ?? 0,
-      cost: trace.totalCost ?? 0, // totalCost 필드 사용
+      cost: trace.totalCost ?? 0,
       public: trace.public,
       metadata: trace.metadata,
       environment: trace.environment
     }));
   } catch (error) {
-    console.error("Failed to fetch traces:", error);
-    throw new Error('트레이스 목록을 불러오는 데 실패했습니다.');
+    console.error("API Error in fetchTraces:", error);
+    error.clientMessage = '트레이스 목록을 불러오는 데 실패했습니다. API 서버 연결 상태를 확인해주세요.';
+    throw error;
   }
 };
 
-//https://api.reference.langfuse.com/#tag/trace/delete/api/public/traces/{traceId}
 /**
  * ID를 기반으로 트레이스를 삭제합니다.
  * @param {string} traceId - 삭제할 트레이스의 ID
@@ -61,7 +62,8 @@ export const deleteTrace = async (traceId) => {
   try {
     await langfuse.api.traceDelete(traceId);
   } catch (error) {
-    console.error(`Failed to delete trace ${traceId}:`, error);
-    throw new Error('Trace 삭제에 실패했습니다.');
+    console.error(`API Error in deleteTrace for ID ${traceId}:`, error);
+    error.clientMessage = `Trace (ID: ${traceId}) 삭제에 실패했습니다. 권한이나 네트워크를 확인해주세요.`;
+    throw error;
   }
 };
