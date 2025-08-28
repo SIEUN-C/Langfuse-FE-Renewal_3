@@ -13,6 +13,9 @@ const TimeRangeFilter = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  /**
+   * 컴포넌트 외부를 클릭했을 때 드롭다운 메뉴를 닫는 효과를 처리합니다.
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -23,6 +26,10 @@ const TimeRangeFilter = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   
+  /**
+   * 시간 범위 옵션을 선택했을 때, 상태를 업데이트하고 드롭다운을 닫습니다.
+   * @param {object} option - 선택된 시간 범위 옵션 객체
+   */
   const onSelect = (option) => {
     handleTimeSelect(option);
     setIsOpen(false);

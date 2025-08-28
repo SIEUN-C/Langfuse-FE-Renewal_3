@@ -22,18 +22,30 @@ const FilterBuilder = ({ filters, onFilterChange }) => {
     const menuRef = useRef(null);
     const [datePickerState, setDatePickerState] = useState({ isOpen: false, filterId: null, triggerRef: null });
 
+    /**
+     * 선택된 컬럼의 데이터 타입에 따라 적절한 연산자 목록을 반환합니다.
+     * @param {string} column - 컬럼명
+     * @returns {string[]} 연산자 배열
+     */
     const getOperatorsForColumn = (column) => {
         if (COLUMN_TYPE_MAP.numeric.includes(column)) return NUMERIC_OPERATORS;
         if (COLUMN_TYPE_MAP.categorical.includes(column)) return CATEGORICAL_OPERATORS;
         return STRING_OPERATORS;
     };
 
+    /**
+     * 새로운 필터 조건을 추가합니다.
+     */
     const addFilter = () => {
         const defaultColumn = COLUMN_OPTIONS[0];
         const newFilter = { id: Date.now(), column: defaultColumn, operator: getOperatorsForColumn(defaultColumn)[0], value: '', metaKey: '' };
         onFilterChange([...filters, newFilter]);
     };
 
+    /**
+     * 특정 필터 조건을 제거합니다.
+     * @param {number} id - 제거할 필터의 ID
+     */
     const removeFilter = (id) => {
         if (filters.length === 1) {
             const initialColumn = COLUMN_OPTIONS[0];
@@ -43,6 +55,12 @@ const FilterBuilder = ({ filters, onFilterChange }) => {
         }
     };
 
+    /**
+     * 필터 조건의 내용을 업데이트합니다.
+     * @param {number} id - 업데이트할 필터의 ID
+     * @param {string} field - 변경할 필드 (예: 'column', 'operator', 'value')
+     * @param {string} value - 새로운 값
+     */
     const updateFilter = (id, field, value) => {
         onFilterChange(prev => prev.map(f => {
             if (f.id !== id) return f;
@@ -53,25 +71,39 @@ const FilterBuilder = ({ filters, onFilterChange }) => {
         }));
     };
 
+    /**
+     * Timestamp 컬럼을 위한 날짜 선택 팝업을 엽니다.
+     * @param {React.MouseEvent} event - 클릭 이벤트 객체
+     * @param {number} filterId - 대상 필터의 ID
+     */
     const handleOpenDatePicker = (event, filterId) => {
         setDatePickerState({ isOpen: true, filterId, triggerRef: { current: event.currentTarget } });
     };
 
+    /**
+     * 날짜 선택 팝업에서 날짜를 선택했을 때 호출됩니다.
+     * @param {Date} date - 선택된 날짜
+     */
     const handleDateSelect = (date) => {
         if (datePickerState.filterId) {
             updateFilter(datePickerState.filterId, 'value', dayjs(date).format('YYYY-MM-DD HH:mm:ss'));
         }
     };
 
+    /**
+     * 날짜 선택 팝업을 닫습니다.
+     */
     const closeDatePicker = () => {
         setDatePickerState({ isOpen: false, filterId: null, triggerRef: null });
     };
 
+    // 현재 날짜 선택 팝업에 표시될 날짜를 계산합니다.
     const currentFilterDate = useMemo(() => {
         const filter = filters.find(f => f.id === datePickerState.filterId);
         return filter?.value ? new Date(filter.value) : new Date();
     }, [filters, datePickerState.filterId]);
 
+    // 필터 드롭다운 메뉴의 위치를 동적으로 조정합니다.
     useEffect(() => {
         if (!isOpen || !containerRef.current || !menuRef.current) return;
         const menuElement = menuRef.current;
@@ -95,6 +127,7 @@ const FilterBuilder = ({ filters, onFilterChange }) => {
         return () => resizeObserver.disconnect();
     }, [isOpen]);
 
+    // 컴포넌트 외부를 클릭하면 필터 드롭다운을 닫습니다.
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (containerRef.current && !containerRef.current.contains(event.target)) setIsOpen(false);
@@ -103,6 +136,7 @@ const FilterBuilder = ({ filters, onFilterChange }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // 현재 활성화된(값이 있는) 필터의 개수를 계산합니다.
     const activeFilterCount = useMemo(() => filters.filter(f => String(f.value).trim() !== '').length, [filters]);
 
     return (
