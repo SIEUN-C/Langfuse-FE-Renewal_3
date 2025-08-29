@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import styles from './PromptsDetail.module.css';
 import SearchInput from '../../components/SearchInput/SearchInput.jsx';
-import useProjectId from '../../hooks/useProjectId.js';
+import useProjectId from '../../hooks/useProjectId';
 import {
   Book,
   Clipboard,
@@ -19,8 +19,9 @@ import {
   Tag,
 } from 'lucide-react';
 import DuplicatePromptModal from './DuplicatePromptModal.jsx';
+import { duplicatePrompt } from './DuplicatePromptModalApi.js';
 import { fetchPromptVersions } from './PromptsDetailApi.js';
-import NewExperimentModal from './NewExperimentModal.jsx'; // NewExperimentModal import
+import NewExperimentModal from './NewExperimentModal'; // NewExperimentModal import
 
 /**
  * [tRPC] 프롬프트 목록 전체를 가져옵니다.
@@ -43,7 +44,6 @@ export default function PromptsDetail() {
   const playgroundMenuRef = useRef(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-
   // Experiment 모달의 열림/닫힘 상태를 관리
   const [isExperimentModalOpen, setExperimentModalOpen] = useState(false);
 
@@ -88,7 +88,7 @@ export default function PromptsDetail() {
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, projectId]);
 
   useEffect(() => {
     loadPromptData();
@@ -179,15 +179,28 @@ export default function PromptsDetail() {
     return Array.from(uniqueVars);
   }, [selectedVersion]);
 
-  const handleDuplicateSubmit = (newName, copyAll) => {
-    console.log({
-      action: 'Duplicate Prompt',
-      newName,
-      copyAll,
-      sourcePrompt: id,
-    });
-    alert(`Prompt duplicated as "${newName}" (자세한 내용은 콘솔 확인)`);
-    setDuplicateModalOpen(false);
+  const handleDuplicateSubmit = async (newName, copyAll) => {
+    if (!selectedVersion?.promptId) {
+      alert("복사할 버전의 ID를 찾을 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.");
+      return;
+    }
+
+    try {
+      const newPrompt = await duplicatePrompt(
+        selectedVersion.promptId, // 고유 DB ID 전달
+        newName,
+        copyAll,
+        projectId
+      );
+      alert(`프롬프트가 "${newName}"으로 복제되었습니다.`);
+      setDuplicateModalOpen(false);
+      if (newPrompt && newPrompt.name) {
+        navigate(`/prompts/${newPrompt.name}`);
+      }
+    } catch (error) {
+      console.error("프롬프트 복제 실패:", error);
+      alert(`프롬프트 복제 중 오류 발생: ${error.message}`);
+    }
   };
 
   // Experiment 모달에서 'Create' 버튼을 눌렀을 때 실행될 함수
@@ -232,7 +245,8 @@ export default function PromptsDetail() {
         </div>
         <div className={styles.headerActions}>
           <button className={styles.actionButton} onClick={() => setDuplicateModalOpen(true)}>
-            <Clipboard size={14} /> Duplicate</button>
+            <Clipboard size={14} /> Duplicate
+          </button>
           <div className={styles.navButtons}>
             <button className={styles.navButton} onClick={handlePrev} disabled={currentPromptIndex <= 0}>
               <ChevronLeft size={16} />
@@ -247,7 +261,6 @@ export default function PromptsDetail() {
       <div className={styles.tabs}>
         <button className={`${styles.tabButton} ${styles.active}`}>Versions</button>
       </div>
-
       <div className={styles.mainGrid}>
         <div className={styles.leftPanel}>
           <div className={styles.versionToolbar}>
@@ -398,5 +411,4 @@ export default function PromptsDetail() {
     </div>
   );
 }
-
 

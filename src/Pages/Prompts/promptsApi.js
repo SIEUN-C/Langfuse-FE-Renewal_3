@@ -101,6 +101,8 @@ export const fetchPromptVersions = async (promptName, projectId) => { // [수정
 
     return versionsResponse.map((v) => ({
       id: v.version,
+      dbId: v.id,
+      promptDbId: v.promptId,
       label: v.commitMessage || `Version ${v.version}`,
       labels: v.labels,
       details: v.updatedAt ? new Date(v.updatedAt).toLocaleString() : 'N/A',

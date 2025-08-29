@@ -1,9 +1,3 @@
-// promptsDetailApi.js
-// 코드 수정후
-
-// [추가] langfuse.api 객체에 어떤 함수가 있는지 확인하기 위한 코드
-//console.log("사용 가능한 Langfuse API 함수 목록:", langfuse.api);
-
 // src/Pages/Prompts/PromptsDetailApi.js
 
 import { langfuse } from 'lib/langfuse';
@@ -14,10 +8,8 @@ import { langfuse } from 'lib/langfuse';
  * @returns {Promise<Array<Object>>} UI에 표시될 버전 정보 배열
  */
 export const fetchPromptVersions = async (promptName) => {
-  // [수정] 1단계: promptsList를 호출하여 프롬프트의 기본 정보와 '버전 번호 목록'을 가져옵니다.
   const listResponse = await langfuse.api.promptsList({ name: promptName });
 
-  // API 응답이 없거나 데이터가 없으면 빈 배열을 반환합니다.
   if (!listResponse.data || listResponse.data.length === 0) {
     return [];
   }
@@ -25,8 +17,6 @@ export const fetchPromptVersions = async (promptName) => {
   const promptInfo = listResponse.data[0];
   const versionNumbers = promptInfo.versions || [];
 
-  // [수정] 2단계: 각 버전 번호에 대해 promptsGet API를 호출하여 상세 정보를 가져옵니다.
-  // Promise.all을 사용하여 모든 버전 정보를 병렬로 동시에 요청합니다.
   const versionDetailsPromises = versionNumbers.map(versionNumber =>
     langfuse.api.promptsGet({ promptName, version: versionNumber })
   );
@@ -35,7 +25,6 @@ export const fetchPromptVersions = async (promptName) => {
 
   const isChatPrompt = (prompt) => Array.isArray(prompt);
 
-  // 이제 각 버전의 상세 정보(v)를 가지고 UI에 맞게 데이터를 가공합니다.
   return versionsResponse.map((v) => {
     const pythonCode = `from langfuse import Langfuse
 
@@ -67,6 +56,7 @@ export const fetchPromptVersions = async (promptName) => {
     langfuse.getPrompt("${v.name}", { version: ${v.version} });`;
 
     return {
+      promptId: v.id, // [수정] 각 버전의 고유 DB ID를 promptId 필드에 추가
       id: v.version,
       label: v.commitMessage || `Version ${v.version}`,
       labels: v.labels,
@@ -83,9 +73,6 @@ export const fetchPromptVersions = async (promptName) => {
     };
   }).sort((a, b) => b.id - a.id);
 };
-
-
-// ... (createNewPromptVersion, duplicatePrompt 함수는 그대로 둡니다)
 
 
 /**
