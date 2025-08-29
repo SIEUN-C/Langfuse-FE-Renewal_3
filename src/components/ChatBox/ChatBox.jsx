@@ -1,31 +1,86 @@
-import React, { useEffect, useRef } from "react";
+// ChatBox.jsx (JS, Vite/React)
+// - schema="kind"  : {id, kind:"message"|"placeholder", role?, content?, name?}
+// - schema="rolePlaceholder": {id, role:"System"|"User"|"Assistant"|"Developer"|"Placeholder", content:""}
+// 프론트만 수정, 백엔드는 3000의 원본 API(trpc/rest)를 그대로 사용하세요.
+
+import React, { useEffect, useRef, useMemo } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import styles from "./ChatBox.module.css";
 import { GripVertical, X, MessageSquarePlus, PlusSquare } from "lucide-react";
+import styles from "./ChatBox.module.css";
 
-/**
- * 메시지 객체 형태(권장)
- * kind === "message"  => { id, kind:"message", role:"System"|"User"|"Assistant"|"Developer", content:string }
- * kind === "placeholder" => { id, kind:"placeholder", name:string }
- *
- * ▣ 화면 매핑
- * - 왼쪽 라벨/셀렉트: System/User/Assistant/Developer 또는 placeholder 뱃지
- * - 오른쪽 입력:
- *   - message: textarea (role 별 안내 placeholder)
- *   - placeholder: input (이름만 입력, 예: msg_history)
- * - 행 오른쪽 끝의 X: 해당 행 삭제
- * - 하단 "+ Message" / "+ Placeholder" 버튼: 행 추가
- */
+function uuid() {
+    return (crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
+}
 
-// Draggable 메시지/플레이스홀더 한 줄
-const ChatMessageRow = ({
-    row,
-    index,
-    moveRow,
-    onChange,
-    onRemove,
-}) => {
+// ----- Canonical 타입 (내부 통합 표현) -----
+/*
+  CanonicalRow = {
+    id: string,
+    type: "message" | "placeholder",
+    role?: "System"|"Developer"|"User"|"Assistant",
+    content?: string,  // message text
+    name?: string      // placeholder name (표시용)
+  }
+*/
+
+// ----- 스키마 어댑터 (입출력 변환) -----
+function toCanonical(list, schema) {
+    if (!Array.isArray(list)) return [];
+    if (schema === "kind") {
+        return list.map((r) => {
+            if (r?.kind === "placeholder") {
+                return { id: r.id ?? uuid(), type: "placeholder", name: r.name ?? "" };
+            }
+            // message
+            return {
+                id: r.id ?? uuid(),
+                type: "message",
+                role: r.role || "User",
+                content: r.content ?? ""
+            };
+        });
+    }
+    // rolePlaceholder
+    return list.map((r) => {
+        if (r?.role === "Placeholder") {
+            // 프롬프트 팀은 content에 플레이스홀더 이름/내용을 넣어왔음
+            return { id: r.id ?? uuid(), type: "placeholder", name: r.content ?? "" };
+        }
+        return {
+            id: r.id ?? uuid(),
+            type: "message",
+            role: r.role || "User",
+            content: r.content ?? ""
+        };
+    });
+}
+
+function fromCanonical(list, schema) {
+    if (schema === "kind") {
+        return list.map((r) => {
+            if (r.type === "placeholder") {
+                return { id: r.id, kind: "placeholder", name: r.name ?? "" };
+            }
+            return {
+                id: r.id,
+                kind: "message",
+                role: r.role,
+                content: r.content ?? ""
+            };
+        });
+    }
+    // rolePlaceholder
+    return list.map((r) => {
+        if (r.type === "placeholder") {
+            return { id: r.id, role: "Placeholder", content: r.name ?? "" };
+        }
+        return { id: r.id, role: r.role, content: r.content ?? "" };
+    });
+}
+
+// ----- 1줄 컴포넌트 -----
+const Row = ({ row, index, moveRow, onChange, onRemove }) => {
     const ref = useRef(null);
 
     const [, drop] = useDrop({
@@ -36,44 +91,35 @@ const ChatMessageRow = ({
             const hoverIndex = index;
             if (dragIndex === hoverIndex) return;
 
-            const hoverRect = ref.current.getBoundingClientRect();
-            const hoverMiddleY = (hoverRect.bottom - hoverRect.top) / 2;
-            const clientOffset = monitor.getClientOffset();
-            const hoverClientY = clientOffset.y - hoverRect.top;
+            const rect = ref.current.getBoundingClientRect();
+            const middleY = (rect.bottom - rect.top) / 2;
+            const client = monitor.getClientOffset();
+            const offsetY = client.y - rect.top;
 
-            if (
-                (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) ||
-                (dragIndex > hoverIndex && hoverClientY > hoverMiddleY)
-            ) {
-                return;
-            }
+            if ((dragIndex < hoverIndex && offsetY < middleY) ||
+                (dragIndex > hoverIndex && offsetY > middleY)) return;
+
             moveRow(dragIndex, hoverIndex);
             item.index = hoverIndex;
-        },
+        }
     });
 
     const [{ isDragging }, drag, preview] = useDrag({
         type: "chat-row",
         item: () => ({ id: row.id, index }),
-        collect: (m) => ({ isDragging: m.isDragging() }),
+        collect: (m) => ({ isDragging: m.isDragging() })
     });
 
     preview(drop(ref));
 
-    const isMsg = row.kind === "message";
+    const isMsg = row.type === "message";
 
     return (
-        <div
-            ref={ref}
-            className={styles.messageRow}
-            style={{ opacity: isDragging ? 0.5 : 1 }}
-        >
-            {/* ⋮⋮ 드래그 핸들 */}
+        <div ref={ref} className={styles.messageRow} style={{ opacity: isDragging ? 0.5 : 1 }}>
             <div ref={drag} className={styles.dragHandleWrapper} title="Drag to reorder">
                 <GripVertical className={styles.dragHandle} size={18} />
             </div>
 
-            {/* 왼쪽 역할 셀: message면 select, placeholder면 배지 */}
             <div className={styles.roleCol}>
                 {isMsg ? (
                     <select
@@ -81,7 +127,6 @@ const ChatMessageRow = ({
                         value={row.role}
                         onChange={(e) => onChange(row.id, { role: e.target.value })}
                     >
-                        {/* ✅ Developer 역할 추가 */}
                         <option>System</option>
                         <option>Developer</option>
                         <option>User</option>
@@ -92,14 +137,12 @@ const ChatMessageRow = ({
                 )}
             </div>
 
-            {/* 우측 입력: message → textarea / placeholder → input */}
             <div className={styles.inputCol}>
                 {isMsg ? (
                     <textarea
                         className={styles.messageTextarea}
                         rows={1}
                         placeholder={
-                            // ✅ 역할별 안내 문구에 Developer 추가
                             row.role === "System"
                                 ? "Enter a system message here."
                                 : row.role === "Developer"
@@ -108,62 +151,57 @@ const ChatMessageRow = ({
                                         ? "Enter an assistant message here."
                                         : "Enter a user message here."
                         }
-                        value={row.content}
+                        value={row.content ?? ""}
                         onChange={(e) => onChange(row.id, { content: e.target.value })}
                     />
                 ) : (
                     <input
                         className={styles.placeholderInput}
-                        placeholder='Enter placeholder name (e.g., "msg_history") here.'
+                        placeholder='Enter placeholder name (e.g., "msg_history")'
                         value={row.name ?? ""}
                         onChange={(e) => onChange(row.id, { name: e.target.value })}
                     />
                 )}
             </div>
 
-            {/* 삭제 버튼 */}
-            <button
-                className={styles.removeButton}
-                onClick={() => onRemove(row.id)}
-                title="Remove row"
-            >
+            <button className={styles.removeButton} onClick={() => onRemove(row.id)} title="Remove row">
                 <X size={16} />
             </button>
         </div>
     );
 };
 
-const ChatBox = ({ messages, setMessages }) => {
-    // 1) 초기 렌더 시 System + User 2줄 자동 생성 (비어있을 때만)
+// ----- 메인 공용 컴포넌트 -----
+export default function ChatBox({
+    // 외부 스키마로 된 값/세터
+    value,                 // Array
+    onChange,              // (same schema Array) => void
+    schema = "kind",       // "kind" | "rolePlaceholder"
+    autoInit = true        // 비었을 때 System/User 2줄 생성
+}) {
+    // 외부를 Canonical로 정규화
+    const rows = useMemo(() => toCanonical(value || [], schema), [value, schema]);
+
+    // 외부로 반영
+    const emit = (canonList) => {
+        onChange(fromCanonical(canonList, schema));
+    };
+
+    // 초기 2줄 자동 생성
     useEffect(() => {
-        if (!messages || messages.length === 0) {
-            const initRows = [
-                {
-                    id: crypto.randomUUID(),
-                    kind: "message",
-                    role: "System",
-                    content: "",
-                },
-                {
-                    id: crypto.randomUUID(),
-                    kind: "message",
-                    role: "User",
-                    content: "",
-                },
-            ];
-            setMessages(initRows);
+        if (!autoInit) return;
+        if (!rows || rows.length === 0) {
+            emit([
+                { id: uuid(), type: "message", role: "System", content: "" },
+                { id: uuid(), type: "message", role: "User", content: "" }
+            ]);
         }
-    }, [messages, setMessages]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rows?.length, autoInit]); // emit은 의존성에서 제외 (무한루프 방지)
 
-    // 2) +Message 클릭 시 다음 역할 계산
     const computeNextRole = () => {
-        // 뒤에서부터 message(placeholder 제외) 찾기
-        const lastMsg = [...messages].reverse().find((m) => m.kind === "message");
-        // ✅ 기본 시작점: Assistant
+        const lastMsg = [...rows].reverse().find((m) => m.type === "message");
         if (!lastMsg) return "Assistant";
-
-        // ✅ 역할 순환에 Developer 포함
-        // System → Developer → User → Assistant → User …
         if (lastMsg.role === "System") return "Developer";
         if (lastMsg.role === "Developer") return "User";
         if (lastMsg.role === "User") return "Assistant";
@@ -173,63 +211,46 @@ const ChatBox = ({ messages, setMessages }) => {
 
     const addMessage = () => {
         const nextRole = computeNextRole();
-        const row = {
-            id: crypto.randomUUID(),
-            kind: "message",
-            role: nextRole,
-            content: "",
-        };
-        setMessages((prev) => [...prev, row]);
+        emit([...rows, { id: uuid(), type: "message", role: nextRole, content: "" }]);
     };
 
     const addPlaceholder = () => {
-        const row = {
-            id: crypto.randomUUID(),
-            kind: "placeholder",
-            name: "",
-        };
-        setMessages((prev) => [...prev, row]);
+        emit([...rows, { id: uuid(), type: "placeholder", name: "" }]);
     };
 
     const removeRow = (id) => {
-        setMessages((prev) => prev.filter((r) => r.id !== id));
+        emit(rows.filter((r) => r.id !== id));
     };
 
     const updateRow = (id, patch) => {
-        setMessages((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+        emit(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
     };
 
-    const moveRow = (dragIndex, hoverIndex) => {
-        setMessages((prev) => {
-            const arr = [...prev];
-            const [dragged] = arr.splice(dragIndex, 1);
-            arr.splice(hoverIndex, 0, dragged);
-            return arr;
-        });
+    const moveRow = (from, to) => {
+        const arr = [...rows];
+        const [dragged] = arr.splice(from, 1);
+        arr.splice(to, 0, dragged);
+        emit(arr);
     };
 
     return (
         <DndProvider backend={HTML5Backend}>
             <div className={styles.chatEditor}>
-                {/* 힌트: 빈 상태였다가 초기화되기 전 짧은 찰나를 위한 안내 */}
-                {(!messages || messages.length === 0) && (
-                    <div className={styles.hint}>
-                        System과 User가 자동으로 추가됩니다…
-                    </div>
+                {(!rows || rows.length === 0) && (
+                    <div className={styles.hint}>System과 User가 자동으로 추가됩니다…</div>
                 )}
 
-                {messages?.map((row, idx) => (
-                    <ChatMessageRow
+                {rows.map((row, idx) => (
+                    <Row
                         key={row.id}
-                        index={idx}
                         row={row}
+                        index={idx}
                         moveRow={moveRow}
                         onChange={updateRow}
                         onRemove={removeRow}
                     />
                 ))}
 
-                {/* 하단 컨트롤바: + Message / + Placeholder */}
                 <div className={styles.chatActions}>
                     <button className={styles.addBtn} onClick={addMessage}>
                         <MessageSquarePlus size={16} /> Message
@@ -241,6 +262,4 @@ const ChatBox = ({ messages, setMessages }) => {
             </div>
         </DndProvider>
     );
-};
-
-export default ChatBox;
+}

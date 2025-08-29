@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// PromptsNew.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './PromptsNew.module.css';
 import { Book } from 'lucide-react';
@@ -8,24 +9,31 @@ import LineNumberedTextarea from '../../components/LineNumberedTextarea/LineNumb
 import FormPageLayout from '../../components/Layouts/FormPageLayout.jsx';
 import FormGroup from '../../components/Form/FormGroup.jsx';
 import { createPromptOrVersion } from './PromptsNewApi.js';
+import useProjectId from 'hooks/useProjectId'; // [추가] useProjectId 훅을 import 합니다.
+
+const ForwardedLineNumberedTextarea = React.forwardRef((props, ref) => (
+    <LineNumberedTextarea {...props} forwardedRef={ref} />
+));
 
 const PromptsNew = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { projectId } = useProjectId();
 
     const initialState = location.state || {};
     const [promptName, setPromptName] = useState(initialState.promptName || '');
     const [promptType, setPromptType] = useState(initialState.promptType || 'Chat');
     const [chatContent, setChatContent] = useState(initialState.chatContent || [
-        { id: Date.now(), role: 'System', content: 'You are a helpful assistant.' },
+        { id: Date.now(), role: 'System', content: '' },
     ]);
     const [textContent, setTextContent] = useState(initialState.textContent || '');
     const [config, setConfig] = useState(initialState.config || '{\n  "temperature": 1\n}');
-    const [labels, setLabels] = useState({ production: false });
+    const [labels, setLabels] = useState(initialState.labels || { production: true }); // Default to true for better UX
     const [commitMessage, setCommitMessage] = useState('');
     const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
     const [variables, setVariables] = useState([]);
     const isNewVersionMode = initialState.isNewVersion || false;
+    const textPromptRef = useRef(null);
 
 
     useEffect(() => {
@@ -52,54 +60,65 @@ const PromptsNew = () => {
         setLabels((prev) => ({ ...prev, [name]: checked }));
     };
 
-    const handleInsertReference = (promptId) => {
-        const referenceText = `{{@ ${promptId} }}`;
+    const handleInsertReference = (referenceTag) => {
         if (promptType === 'Text') {
-            setTextContent((prev) => prev + referenceText);
+            setTextContent((prev) => prev + referenceTag);
         } else {
-            alert(`Please manually insert ${referenceText} into the desired message.`);
+            // Chat 모드일 경우, 태그를 클립보드에 복사하고 안내 메시지를 표시합니다.
+            navigator.clipboard.writeText(referenceTag).then(() => {
+                alert(`Reference tag copied to clipboard. Please paste it into the desired message.\n\nCopied: ${referenceTag}`);
+            }).catch(err => {
+                console.error("클립보드 복사 실패:", err);
+                alert("클립보드 복사에 실패했습니다. 수동으로 복사해주세요.");
+            });
         }
     };
-    
-    const handleSave = async () => {
-        try {
-            await createPromptOrVersion({
-                promptName,
-                promptType,
-                chatContent,
-                textContent,
-                config,
-                labels,
-                commitMessage,
-            });
 
-            alert(`'${promptName}' 프롬프트의 새 버전이 성공적으로 저장되었습니다.`);
+
+    const handleSave = async () => {
+        if (!projectId) {
+            alert("Project is not selected. Please select a project first.");
+            return;
+        }
+
+        try {
+            // [수정] createPromptOrVersion 호출 시, 파라미터 객체와 projectId를 함께 전달합니다.
+            await createPromptOrVersion(
+                {
+                    promptName,
+                    promptType,
+                    chatContent,
+                    textContent,
+                    config,
+                    labels,
+                    commitMessage,
+                },
+                projectId
+            );
+
+            alert(`'${promptName}' prompt's new version has been saved successfully.`);
             navigate(`/prompts/${promptName}`);
         } catch (err) {
             console.error("Failed to save prompt:", err);
-            // AxiosError is not available in JS, so we check for response property
-            if (err.response) {
-                alert(`프롬프트 저장에 실패했습니다: ${err.response?.data?.message || err.message}`);
-            } else {
-                alert(`프롬프트 저장에 실패했습니다: ${String(err)}`);
-            }
+            // [수정] API에서 반환된 에러 메시지를 직접 사용합니다.
+            alert(`Failed to save prompt: ${err.message}`);
         }
     };
-    
+
     const breadcrumbs = (
         <>
-          <Book size={16} />
-          <Link to="/prompts">Prompts</Link>
-          <span>/</span>
-           {isNewVersionMode ? (
-            <>
-              <Link to={`/prompts/${promptName}`}>{promptName}</Link>
-              <span>/</span>
-              <span className="active">New Version</span>
-            </>
-          ) : (
-            <span className="active">New prompt</span>
-          )}
+            <Book size={16} />
+            <Link to="/prompts">Prompts</Link>
+            <span>/</span>
+            {isNewVersionMode ? (
+                <>
+                    <Link to={`/prompts/${promptName}`}>{promptName}</Link>
+                    <span>/</span>
+                    <span className="active">New Version</span>
+                </>
+            ) : (
+                <span className="active">New prompt</span>
+            )}
         </>
     );
 
@@ -115,43 +134,60 @@ const PromptsNew = () => {
                 label="Name"
                 subLabel="Unique identifier for this prompt."
             >
-                <input 
-                  id="prompt-name" 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="e.g. summarize-short-text" 
-                  value={promptName} 
-                  onChange={(e) => setPromptName(e.target.value)} 
-                  disabled={isNewVersionMode}
+                <input
+                    id="prompt-name"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. summarize-short-text"
+                    value={promptName}
+                    onChange={(e) => setPromptName(e.target.value)}
+                    disabled={isNewVersionMode}
                 />
             </FormGroup>
-            
+
             <FormGroup
                 htmlFor="prompt-content"
                 label="Prompt"
                 subLabel="Define your prompt template."
             >
-                 <div className={styles.promptHeader}>
+                <div className={styles.promptHeader}>
                     <div className={styles.typeSelector}>
-                        <button className={`${styles.typeButton} ${promptType === 'Chat' ? styles.active : ''}`} onClick={() => setPromptType('Chat')}>Chat</button>
-                        <button className={`${styles.typeButton} ${promptType === 'Text' ? styles.active : ''}`} onClick={() => setPromptType('Text')}>Text</button>
+                        <button
+                            className={`${styles.typeButton} ${promptType === 'Chat' ? styles.active : ''}`}
+                            onClick={() => setPromptType('Chat')}
+                            disabled={isNewVersionMode}
+                        >
+                            Chat
+                        </button>
+                        <button
+                            className={`${styles.typeButton} ${promptType === 'Text' ? styles.active : ''}`}
+                            onClick={() => setPromptType('Text')}
+                            disabled={isNewVersionMode}
+                        >
+                            Text
+                        </button>
                     </div>
-                    {promptType === 'Text' && (
-                        <button className={styles.addReferenceButton} onClick={() => setIsReferenceModalOpen(true)}>+ Add prompt reference</button>
-                    )}
+                    {/* This button was misplaced in the original code. It should be outside the textarea. */}
+                    <button className={styles.addReferenceButton} onClick={() => setIsReferenceModalOpen(true)}>
+                        + Add prompt reference
+                    </button>
                 </div>
-                {promptType === 'Chat' ? (
-                    <ChatBox messages={chatContent} setMessages={setChatContent} />
-                ) : (
-                    <LineNumberedTextarea
+                {promptType === 'Text' ? (
+                    <ForwardedLineNumberedTextarea
                         id="prompt-content"
                         value={textContent}
                         onChange={(e) => setTextContent(e.target.value)}
                         placeholder='Enter your text prompt here, e.g. "Summarize this: {{text}}"'
                         minHeight={200}
-                    >
-                         <button className={styles.addReferenceButtonInEditor} onClick={() => setIsReferenceModalOpen(true)}>+ Add prompt reference</button>
-                    </LineNumberedTextarea>
+                        ref={textPromptRef} // Pass ref here
+                    />
+                ) : (
+                    <ChatBox //프롬프트팀
+                        value={chatContent}
+                        onChange={setChatContent}
+                        schema="rolePlaceholder"
+                        autoInit={true}
+                    />
                 )}
                 {variables.length > 0 && (
                     <div className={styles.variablesContainer}>

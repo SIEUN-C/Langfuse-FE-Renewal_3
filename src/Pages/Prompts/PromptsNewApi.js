@@ -1,17 +1,17 @@
-import { langfuse } from 'lib/langfuse';
+// PromptsNewApi.js
+import axios from 'axios';
 
 /**
- * 새로운 프롬프트를 생성하거나 기존 프롬프트의 새 버전을 생성합니다.
- * @param {object} params - 프롬프트 생성에 필요한 데이터
- * @param {string} params.promptName
- * @param {'Chat' | 'Text'} params.promptType
- * @param {Array<object>} params.chatContent
- * @param {string} params.textContent
- * @param {string} params.config - JSON string
- * @param {object} params.labels
- * @param {string} params.commitMessage
+ * [tRPC] 새로운 프롬프트를 생성하거나 새 버전을 만듭니다.
+ * @param {object} params - 프롬프트 생성에 필요한 파라미터 객체
+ * @param {string} projectId - API를 호출할 프로젝트의 ID
  */
-export const createPromptOrVersion = async (params) => {
+export const createPromptOrVersion = async (params, projectId) => { // [수정] projectId를 두 번째 인자로 받도록 변경
+  // [수정] projectId가 없으면 에러를 발생시켜 API 호출을 막습니다.
+  if (!projectId) {
+    throw new Error("Project ID is missing. Cannot create prompt.");
+  }
+
   const {
     promptName,
     promptType,
@@ -22,39 +22,37 @@ export const createPromptOrVersion = async (params) => {
     commitMessage,
   } = params;
 
-  // 활성화된 레이블만 문자열 배열로 변환합니다.
   const activeLabels = Object.entries(labels)
     .filter(([, isActive]) => isActive)
     .map(([label]) => label);
-  
-  // 공통 요청 본문을 정의합니다.
-  const commonPayload = {
-    name: promptName,
-    config: JSON.parse(config),
-    labels: activeLabels,
-    commitMessage: commitMessage || null,
+
+  const payload = {
+    json: {
+      projectId: projectId, // [수정] 인자로 전달받은 projectId를 사용
+      name: promptName,
+      type: promptType.toLowerCase(),
+      prompt: promptType === 'Text'
+        ? textContent
+        : chatContent
+            .filter(msg => msg.role !== 'Placeholder')
+            .map(({ role, content }) => ({ role: role.toLowerCase(), content: content || '' })),
+      config: JSON.parse(config),
+      labels: activeLabels,
+      commitMessage: commitMessage ? commitMessage : null,
+    },
+    meta: {
+      values: {
+        commitMessage: ["undefined"]
+      }
+    }
   };
 
-  // 프롬프트 타입에 따라 요청을 분기합니다.
-  if (promptType === 'Chat') {
-    const chatPromptData = chatContent
-      .filter(msg => msg.role !== 'Placeholder')
-      .map(({ role, content }) => ({
-        type: 'chatmessage',
-        role: role.toLowerCase(),
-        content,
-      }));
-
-    await langfuse.api.promptsCreate({
-      ...commonPayload,
-      type: 'chat',
-      prompt: chatPromptData,
-    });
-  } else { // 'Text'
-    await langfuse.api.promptsCreate({
-      ...commonPayload,
-      type: 'text',
-      prompt: textContent,
-    });
+  try {
+    await axios.post('/api/trpc/prompts.create', payload);
+  } catch (error) {
+    console.error("Failed to create prompt via tRPC:", error);
+    // [수정] 에러 메시지를 좀 더 구체적으로 전달합니다.
+    const errorMessage = error.response?.data?.error?.message || "An unknown error occurred while creating the prompt.";
+    throw new Error(errorMessage);
   }
 };

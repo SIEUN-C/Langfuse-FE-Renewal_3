@@ -143,13 +143,17 @@
 
 /* ✅ 아래 tagPill 스타일을 파일 하단에 추가해주세요. */
 .tagPill {
-  background-color: #312e81; /* 이미지와 유사한 보라색 배경 */
-  color: #e0e7ff;             /* 밝은 텍스트 색상 */
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;        /* 태그 이름이 길어도 줄바꿈 방지 */
+  display: inline-flex; /* 아이콘과 텍스트를 한 줄에 정렬 */
+  align-items: center; /* 세로 중앙 정렬 */
+  background-color: #312e81; /* 배경색 */
+  color: #e0e7ff; /* 텍스트 색상 */
+  padding: 4px 8px; /* 안쪽 여백 */
+  border-radius: 6px; /* 모서리 둥글게 */
+  font-size: 13px; /* 글꼴 크기 */
+  font-weight: 500; /* 글꼴 두께 */
+  line-height: 1; /* 아이콘과 텍스트의 높이 정렬 */
+  white-space: nowrap; /* 태그 내용이 한 줄에 표시되도록 */
+
 }
 
 .actionCell {
@@ -271,4 +275,86 @@
 
 .deleteConfirmButton:hover {
   background-color: #9f1239;
+}
+
+/* --- Tag Editor Popover Styles --- */
+.tagEditorPopover {
+  position: absolute;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  width: 250px;
+  font-size: 14px;
+}
+
+.tagEditorHeader {
+  padding: 12px 16px;
+  border-bottom: 1px solid #334155;
+}
+
+.tagEditorTitle {
+  font-weight: 500;
+  color: #f1f5f9;
+}
+
+.tagInputContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.tagEditorTag {
+  display: flex;
+  align-items: center;
+  background-color: #312e81;
+  color: #e0e7ff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.removeTagBtn {
+  background: none;
+  border: none;
+  color: #e0e7ff;
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tagEditorInput {
+  background: none;
+  border: none;
+  outline: none;
+  color: #e2e8f0;
+  font-size: 14px;
+  flex-grow: 1;
+  min-width: 80px;
+}
+
+.tagEditorFooter {
+  padding: 12px 16px;
+  border-top: 1px solid #334155;
+  text-align: right;
+}
+
+.saveButton {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.saveButton:hover {
+  filter: brightness(1.1);
 }

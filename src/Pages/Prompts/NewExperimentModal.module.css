@@ -1,0 +1,332 @@
+/* src/Pages/Prompts/NewExperimentModal.module.css (전체 코드) */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: #0f172a;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  width: 100%;
+  max-width: 550px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.docLink {
+  color: #38bdf8;
+  text-decoration: none;
+}
+.docLink:hover {
+  text-decoration: underline;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 4px;
+}
+
+.body {
+  padding: 0 24px 24px;
+  color: #cbd5e1;
+  font-size: 14px;
+  border-top: 1px solid #334155;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.formRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.formRow > label {
+  font-weight: 500;
+  color: #cbd5e1;
+  font-size: 13px;
+  flex-basis: 120px;
+  flex-shrink: 0;
+}
+
+.formRow > div {
+  flex: 1;
+}
+
+/* ▼▼▼ 여기부터 수정된 부분입니다 ▼▼▼ */
+.input, .textarea, .select, .selectButton {
+  width: 100%;
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #f1f5f9;
+  font-size: 14px;
+  box-sizing: border-box; /* 높이 계산에 padding과 border를 포함시킵니다. */
+}
+
+/* 한 줄짜리 입력 필드들의 높이를 통일합니다. */
+.input, .select, .selectButton {
+  height: 38px;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 60px; /* 기본 높이를 조금 줄입니다. */
+}
+/* ▲▲▲ 여기까지 수정된 부분입니다 ▲▲▲ */
+
+.section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #334155;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.inlineGroup {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px; /* 제목과 입력창 사이 간격 추가 */
+}
+
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select {
+  padding-right: 32px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.selectIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.evaluatorInfo {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.footer {
+  padding: 16px 24px;
+  border-top: 1px solid #334155;
+  display: flex;
+  justify-content: flex-end;
+  background-color: #0f172a;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.createButton {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.createButton:hover {
+  background-color: #e2e8f0;
+}
+
+.customSelectContainer {
+  position: relative;
+}
+
+.selectButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selectButton:focus, .selectButton:focus-visible {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dropdownItem {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #f1f5f9;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdownItem:hover {
+  background-color: #334155;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: #475569;
+  margin: 4px 0;
+}
+
+.actionItem {
+  color: #38bdf8;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.iconButton:hover {
+  background-color: #334155;
+  color: #f1f5f9;
+}
+/* --- ▼▼▼ 이 코드를 NewExperimentModal.module.css 파일 맨 아래에 추가해주세요 ▼▼▼ --- */
+
+.modelNameContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* select와 버튼 사이 간격 */
+  flex-grow: 1;
+}
+
+.addConnectionButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 0 12px;
+  height: 38px; /* select 높이와 동일하게 설정 */
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap; /* 버튼 텍스트가 줄바꿈되지 않도록 */
+}
+
+.addConnectionButton:hover {
+  background-color: #334155;
+}
+
+
+
+
+/* --- ▼▼▼ 이 코드를 NewExperimentModal.module.css 파일 맨 아래에 추가해주세요 ▼▼▼ --- */
+
+.dropdownItem.disabled {
+  color: #94a3b8; /* 비활성화된 텍스트 색상 */
+  cursor: not-allowed;
+}
+
+.dropdownItem.disabled:hover {
+  background-color: transparent; /* 호버 효과 제거 */
+}
+
+
+--- ▼▼▼ 이전 답변에서 추가를 요청드렸던 코드입니다 ▼▼▼ ---
+
+/* '+ Add Connection' 옵션에 대한 스타일을 추가합니다. */
+.addConnectionOption {
+  font-style: italic;
+  color: #007bff; /* 원하는 색상으로 변경 가능 */
+  cursor: pointer;
+}

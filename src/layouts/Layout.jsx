@@ -136,6 +136,17 @@ export default function Layout({ session }) {
         { label: "Settings", icon: <Settings size={18} />, path: "/settings" },
     ];
 
+  // <<< START: 수정된 부분 >>>
+  // Playground 경로를 위한 특별 로직을 추가합니다.
+  const isPathActive = (path) => {
+    if (path === "/playground") {
+      return location.pathname.includes("/playground");
+    }
+    // 기존 로직은 `NavLink`의 `isActive`에 의존하거나 `startsWith`를 사용합니다.
+    return !!matchPath({ path, end: path === "/" }, location.pathname) ||
+           (path !== "/" && location.pathname.startsWith(path));
+  };
+
     const navClass = ({ isActive }) =>
         `${styles.menuItem} ${isActive ? styles.active : ""} ${collapsed ? styles.iconOnly : ""}`.trim();
 

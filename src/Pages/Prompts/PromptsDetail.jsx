@@ -1,6 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+// PromptsDetail.jsx
+//수정 코드
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import styles from './PromptsDetail.module.css';
+import SearchInput from '../../components/SearchInput/SearchInput.jsx';
+import useProjectId from '../../hooks/useProjectId.js';
 import {
   Book,
   Clipboard,
@@ -15,12 +19,18 @@ import {
   Tag,
 } from 'lucide-react';
 import DuplicatePromptModal from './DuplicatePromptModal.jsx';
-import { fetchPromptVersions, createNewPromptVersion } from './promptsApi.js';
+import { fetchPromptVersions } from './PromptsDetailApi.js';
+import NewExperimentModal from './NewExperimentModal.jsx'; // NewExperimentModal import
 
+/**
+ * [tRPC] 프롬프트 목록 전체를 가져옵니다.
+ * @param {string} projectId - 프로젝트 ID를 인자로 받습니다.
+ */
 // --- 메인 컴포넌트 ---
 export default function PromptsDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { projectId } = useProjectId();
 
   const [versions, setVersions] = useState([]);
   const [selectedVersion, setSelectedVersion] = useState(null);
@@ -29,16 +39,48 @@ export default function PromptsDetail() {
   const [activeDetailTab, setActiveDetailTab] = useState('Prompt');
   const [allPromptNames, setAllPromptNames] = useState([]);
   const [isDuplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [isPlaygroundMenuOpen, setPlaygroundMenuOpen] = useState(false);
+  const playgroundMenuRef = useRef(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Experiment 모달의 열림/닫힘 상태를 관리
+  const [isExperimentModalOpen, setExperimentModalOpen] = useState(false);
+
+  const filteredVersions = useMemo(() => {
+    const searchId = parseInt(searchQuery);
+
+    if (searchQuery && !isNaN(searchId)) {
+      return versions.filter(version => version.id === searchId);
+    }
+
+    if (!searchQuery) {
+      return versions;
+    }
+
+    const query = searchQuery.toLowerCase();
+    // 아래 switch 문을 제거하고 이 로직만 남겨야 합니다.
+    return versions.filter(version => {
+      return (
+        version.labels.some(label => label.toLowerCase().includes(query)) ||
+        version.tags.some(tag => tag.toLowerCase().includes(query)) ||
+        version.details.toLowerCase().includes(query) ||
+        version.author.toLowerCase().includes(query)
+      );
+    });
+  }, [versions, searchQuery]);
+
+
 
   const loadPromptData = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedVersions = await fetchPromptVersions(id);
+      const fetchedVersions = await fetchPromptVersions(id, projectId);
       setVersions(fetchedVersions);
       if (fetchedVersions.length > 0) {
-        setSelectedVersion(fetchedVersions[0]); // 최신 버전을 기본으로 선택
+        setSelectedVersion(fetchedVersions[0]);
       }
     } catch (err) {
       console.error("Failed to fetch prompt details:", err);
@@ -52,24 +94,60 @@ export default function PromptsDetail() {
     loadPromptData();
   }, [loadPromptData]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (playgroundMenuRef.current && !playgroundMenuRef.current.contains(event.target)) {
+        setPlaygroundMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleNewVersion = () => {
     if (!id || !selectedVersion) return;
 
     navigate(`/prompts/new`, {
       state: {
+        // 이제 상단에서 선언한 projectId 변수를 여기서 정상적으로 사용할 수 있습니다.
+        projectId: projectId, // <-- 2. 'projectid'를 'projectId' (camelCase)로 수정
         promptName: id,
         promptType: selectedVersion.prompt.system ? 'Chat' : 'Text',
         chatContent: selectedVersion.prompt.system
           ? [
-              { id: 1, role: 'System', content: selectedVersion.prompt.system },
-              { id: 2, role: 'User', content: selectedVersion.prompt.user },
-            ]
+            { id: 1, role: 'System', content: selectedVersion.prompt.system },
+            { id: 2, role: 'User', content: selectedVersion.prompt.user },
+          ]
           : [{ id: 1, role: 'System', content: 'You are a helpful assistant.' }],
         textContent: selectedVersion.prompt.system ? '' : selectedVersion.prompt.user,
         config: JSON.stringify(selectedVersion.config, null, 2),
         isNewVersion: true,
         version: selectedVersion.id
       },
+    });
+  };
+
+
+  const handleGoToPlayground = () => {
+    if (!selectedVersion) return;
+
+    const messages = [];
+    if (selectedVersion.prompt.system) {
+      messages.push({ id: Date.now() + 1, role: 'System', content: selectedVersion.prompt.system });
+    }
+    if (selectedVersion.prompt.user) {
+      messages.push({ id: Date.now() + 2, role: 'User', content: selectedVersion.prompt.user });
+    }
+
+    navigate('/playground', {
+      state: {
+        promptName: id,
+        promptVersion: selectedVersion.id,
+        messages: messages,
+        config: selectedVersion.config,
+      }
     });
   };
 
@@ -112,6 +190,13 @@ export default function PromptsDetail() {
     setDuplicateModalOpen(false);
   };
 
+  // Experiment 모달에서 'Create' 버튼을 눌렀을 때 실행될 함수
+  const handleRunExperiment = () => {
+    console.log("Create Experiment button clicked. Form data is in the modal.");
+    alert('실험 생성 요청이 콘솔에 기록되었습니다.');
+    setExperimentModalOpen(false);
+  };
+
   if (isLoading) {
     return <div className={styles.container}><div className={styles.placeholder}>프롬프트를 불러오는 중...</div></div>;
   }
@@ -120,12 +205,12 @@ export default function PromptsDetail() {
     return (
       <div className={styles.container}>
         <div className={styles.header}>
-            <div className={styles.breadcrumbs}>
-                <Book size={16} />
-                <Link to="/prompts" style={{ color: '#94a3b8', textDecoration: 'none' }}>Prompts</Link>
-                <span>/</span>
-                <span className={styles.promptName}>{id}</span>
-            </div>
+          <div className={styles.breadcrumbs}>
+            <Book size={16} />
+            <Link to="/prompts" style={{ color: '#94a3b8', textDecoration: 'none' }}>Prompts</Link>
+            <span>/</span>
+            <span className={styles.promptName}>{id}</span>
+          </div>
         </div>
         <div className={styles.placeholder}>⚠️ {error || "프롬프트 데이터를 찾을 수 없습니다."}</div>
       </div>
@@ -141,7 +226,7 @@ export default function PromptsDetail() {
           </h1>
           <div className={styles.versionDropdown}>
             {selectedVersion.tags.map(tag => (
-              <span key={tag} className={styles.tagItem}><Tag size={12}/> {tag}</span>
+              <span key={tag} className={styles.tagItem}><Tag size={12} /> {tag}</span>
             ))}
           </div>
         </div>
@@ -149,19 +234,18 @@ export default function PromptsDetail() {
           <button className={styles.actionButton} onClick={() => setDuplicateModalOpen(true)}>
             <Clipboard size={14} /> Duplicate</button>
           <div className={styles.navButtons}>
-             <button className={styles.navButton} onClick={handlePrev} disabled={currentPromptIndex <= 0}>
-                <ChevronLeft size={16}/>
-             </button>
-             <button className={styles.navButton} onClick={handleNext} disabled={currentPromptIndex === -1 || currentPromptIndex >= allPromptNames.length - 1}>
-                <ChevronRight size={16}/>
-             </button>
+            <button className={styles.navButton} onClick={handlePrev} disabled={currentPromptIndex <= 0}>
+              <ChevronLeft size={16} />
+            </button>
+            <button className={styles.navButton} onClick={handleNext} disabled={currentPromptIndex === -1 || currentPromptIndex >= allPromptNames.length - 1}>
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
 
       <div className={styles.tabs}>
         <button className={`${styles.tabButton} ${styles.active}`}>Versions</button>
-        <button className={styles.tabButton}>Metrics</button>
       </div>
 
       <div className={styles.mainGrid}>
@@ -169,14 +253,19 @@ export default function PromptsDetail() {
           <div className={styles.versionToolbar}>
             <div className={styles.searchBox}>
               <Search size={14} className={styles.searchIcon} />
-              <input type="text" placeholder="Search versions" />
+              <input
+                type="text"
+                placeholder="Search versions"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <button className={styles.newButton} onClick={handleNewVersion}>
               <Plus size={16} /> New Version
             </button>
           </div>
           <ul className={styles.versionList}>
-            {versions.map(version => (
+            {filteredVersions.map(version => (
               <li
                 key={version.id}
                 className={`${styles.versionItem} ${selectedVersion?.id === version.id ? styles.selected : ''}`}
@@ -187,14 +276,14 @@ export default function PromptsDetail() {
                 </div>
                 <div className={styles.tagsContainer}>
                   {version.labels.map(label => (
-                      <span key={label} className={label.toLowerCase() === 'production' ? styles.statusTagProd : styles.statusTagLatest}>
-                          <GitCommitHorizontal size={12}/>{label}
-                      </span>
+                    <span key={label} className={label.toLowerCase() === 'production' ? styles.statusTagProd : styles.statusTagLatest}>
+                      <GitCommitHorizontal size={12} />{label}
+                    </span>
                   ))}
                 </div>
                 <div className={styles.versionMeta}>
-                    <p>{version.details}</p>
-                    <p>by {version.author}</p>
+                  <p>{version.details}</p>
+                  <p>by {version.author}</p>
                 </div>
               </li>
             ))}
@@ -210,8 +299,31 @@ export default function PromptsDetail() {
               <button className={`${styles.detailTabButton} ${activeDetailTab === 'Use' ? styles.active : ''}`} onClick={() => setActiveDetailTab('Use')}>Use Prompt</button>
             </div>
             <div className={styles.detailActions}>
-              <button className={styles.playgroundButton}><Play size={14} /> Playground</button>
-              <button className={styles.playgroundButton}>Experiment</button>
+              <div className={styles.playgroundDropdownContainer} ref={playgroundMenuRef}>
+                <button
+                  className={styles.playgroundButton}
+                  onClick={() => setPlaygroundMenuOpen(prev => !prev)}
+                >
+                  <Play size={14} /> Playground
+                </button>
+
+                {isPlaygroundMenuOpen && (
+                  <div className={styles.playgroundDropdownMenu}>
+                    <div className={styles.playgroundDropdownItem} onClick={handleGoToPlayground}>
+                      Fresh playground
+                    </div>
+                    <div className={styles.playgroundDropdownItem} onClick={() => alert('Add to existing 기능은 아직 구현되지 않았습니다.')}>
+                      Add to existing
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                className={styles.playgroundButton}
+                onClick={() => setExperimentModalOpen(true)}
+              >
+                Dataset run
+              </button>
               <button className={styles.iconButton}><MessageCircle size={16} /></button>
               <button className={styles.iconButton}><MoreVertical size={18} /></button>
             </div>
@@ -219,26 +331,26 @@ export default function PromptsDetail() {
 
           <div className={styles.promptArea}>
             {activeDetailTab === 'Prompt' && (
-                <>
-                    {selectedVersion.prompt.system && (
-                        <div className={styles.promptCard}>
-                            <div className={styles.promptHeader}>System Prompt</div>
-                            <div className={styles.promptBody}><pre>{selectedVersion.prompt.system}</pre></div>
-                        </div>
-                    )}
-                    <div className={styles.promptCard}>
-                        <div className={styles.promptHeader}>Text Prompt</div>
-                        <div className={styles.promptBody}><pre>{selectedVersion.prompt.user}</pre></div>
+              <>
+                {selectedVersion.prompt.system && (
+                  <div className={styles.promptCard}>
+                    <div className={styles.promptHeader}>System Prompt</div>
+                    <div className={styles.promptBody}><pre>{selectedVersion.prompt.system}</pre></div>
+                  </div>
+                )}
+                <div className={styles.promptCard}>
+                  <div className={styles.promptHeader}>Text Prompt</div>
+                  <div className={styles.promptBody}><pre>{selectedVersion.prompt.user}</pre></div>
+                </div>
+                {variables.length > 0 && (
+                  <div className={styles.variablesInfo}>
+                    The following variables are available:
+                    <div className={styles.variablesContainer}>
+                      {variables.map(v => <span key={v} className={styles.variableTag}>{v}</span>)}
                     </div>
-                     {variables.length > 0 && (
-                        <div className={styles.variablesInfo}>
-                            The following variables are available:
-                            <div className={styles.variablesContainer}>
-                                {variables.map(v => <span key={v} className={styles.variableTag}>{v}</span>)}
-                            </div>
-                        </div>
-                    )}
-                </>
+                  </div>
+                )}
+              </>
             )}
 
             {activeDetailTab === 'Config' && (
@@ -247,16 +359,16 @@ export default function PromptsDetail() {
                 <div className={styles.promptBody}><pre>{JSON.stringify(selectedVersion.config ?? {}, null, 2)}</pre></div>
               </div>
             )}
-             
+
             {activeDetailTab === 'Use' && (
               <>
                 <div className={styles.promptCard}>
-                    <div className={styles.promptHeader}>Python</div>
-                    <div className={styles.promptBody}><pre>{selectedVersion.useprompts.python}</pre></div>
+                  <div className={styles.promptHeader}>Python</div>
+                  <div className={styles.promptBody}><pre>{selectedVersion.useprompts.python}</pre></div>
                 </div>
                 <div className={styles.promptCard}>
-                    <div className={styles.promptHeader}>JS/TS</div>
-                    <div className={styles.promptBody}><pre>{selectedVersion.useprompts.jsTs}</pre></div>
+                  <div className={styles.promptHeader}>JS/TS</div>
+                  <div className={styles.promptBody}><pre>{selectedVersion.useprompts.jsTs}</pre></div>
                 </div>
               </>
             )}
@@ -274,6 +386,17 @@ export default function PromptsDetail() {
           currentVersion={selectedVersion?.id || 0}
         />
       )}
+      {isExperimentModalOpen && (
+        <NewExperimentModal
+          isOpen={isExperimentModalOpen}
+          onClose={() => setExperimentModalOpen(false)}
+          onSubmit={handleRunExperiment}
+          promptName={id}
+          promptVersion={selectedVersion?.id}
+        />
+      )}
     </div>
   );
 }
+
+

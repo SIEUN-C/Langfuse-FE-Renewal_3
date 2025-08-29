@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, } from "react";
 import {
   Info,
   Play,
@@ -22,10 +22,13 @@ import NewLlmConnectionModal from "./NewLlmConnectionModal";
 import PlaygroundPanel from "./PlaygroundPanel";
 import NewItemModal from "./NewItemModal";
 import SavePromptPopover from "./SavePromptPopover";
-// import PageHeader from "../../components/PageHeader/PageHeader";
-import useProjectId from "../../hooks/useProjectId";
+
+
 import { ToolsAPI } from "../../services/tools.service";
 import { SchemasAPI } from "../../services/schemas.service";
+
+import { useLocation, useNavigate, useParams, Navigate } from "react-router-dom";
+import useProjectId from "../../hooks/useProjectId";
 
 
 
@@ -37,16 +40,43 @@ function mergeMessageText(messages) {
     .join("\n");
 }
 
-// {{ var }} 추출
-function extractVariablesFromMessages(messages) {
-  const text = mergeMessageText(messages);
-  // {{  variable_name  }} 허용(공백 trim), 영문/숫자/_/-
-  const re = /\{\{\s*([a-zA-Z0-9_\-]+)\s*\}\}/g;
-  const set = new Set();
+// {{ var }} 패턴 공통
+const VAR_RE = /\{\{\s*([a-zA-Z0-9_\-]+)\s*\}\}/g;
+
+// 텍스트 한 덩어리에서 변수 추출
+function extractVarsFromText(text, set) {
+  if (typeof text !== "string" || !text) return;
   let m;
-  while ((m = re.exec(text))) set.add(m[1]);
+  while ((m = VAR_RE.exec(text))) set.add(m[1]);
+}
+
+// 메시지 배열 전체에서(placeholder 포함) 변수 추출
+function extractVariablesFromMessages(messages) {
+  const set = new Set();
+
+  for (const m of messages || []) {
+    // 1) 일반 메시지: content 문자열에서 스캔
+    if ((m?.kind !== "placeholder" && m?.role !== "Placeholder")) {
+      extractVarsFromText(m?.content, set);
+      continue;
+    }
+
+    // 2) placeholder: JSON 파싱 후 내부 message.content에서 스캔
+    try {
+      const parsed = JSON.parse(m?.content || "{}");
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      for (const it of arr) {
+        extractVarsFromText(it?.content, set);
+      }
+    } catch {
+      // JSON이 아니면(그냥 문자열) 통으로 스캔
+      extractVarsFromText(m?.content, set);
+    }
+  }
+
   return Array.from(set);
 }
+
 
 // 제출 직전 치환
 function fillVariables(messages, values = {}) {
@@ -61,6 +91,25 @@ function fillVariables(messages, values = {}) {
   });
 }
 
+// ▼▼▼ ADD: placeholder 파싱 유틸
+function extractPlaceholders(messages) {
+  const list = [];
+  messages.forEach((m, idx) => {
+    if (m?.kind === "placeholder" || m?.role === "Placeholder") {
+      let parsed = null;
+      try {
+        parsed = JSON.parse(m.content || "{}"); // {} 또는 []
+      } catch { }
+      list.push({
+        index: idx,
+        name: (m.name || "").trim(), // 없으면 빈 문자열 -> UI에선 "Unnamed placeholder"
+        value: parsed,
+        raw: m.content || "",
+      });
+    }
+  });
+  return list;
+}
 
 
 // ---------- Tools Panel ----------
@@ -253,22 +302,21 @@ function StreamSettingsPopover({ open, streaming, onChangeStreaming, onClose }) 
 }
 
 
-// const VariablesPanelContent = () => (
-//   <>
-//     <div className={styles.emptyNote} style={{ marginTop: 8 }}></div>
-//   </>
-// );
+
 
 // ---------- Variables Panel ----------
-const VariablesPanelContent = ({ names, values, onChangeValue, onReset }) => {
+const VariablesPanelContent = ({ names, values, onChangeValue, onReset, placeholders = [] }) => {
   const hasVars = names.length > 0;
+  const hasPH = placeholders.length > 0;
   return (
     <>
-      {!hasVars ? (
+      {!hasVars && !hasPH ? (
         <div className={styles.emptyNote} style={{ marginTop: 8 }}>
           No variables detected. Use <code>{'{{name}}'}</code> in messages to create one.
         </div>
-      ) : (
+      ) : null}
+
+      {hasVars && (
         <div className={styles.varsList}>
           {names.map((n) => (
             <div key={n} className={styles.varRow}>
@@ -282,12 +330,23 @@ const VariablesPanelContent = ({ names, values, onChangeValue, onReset }) => {
               />
             </div>
           ))}
-          <div className={styles.varsActions}>
-            <button className={styles.toolButton} onClick={onReset}>
-              Reset variables
-            </button>
-          </div>
         </div>
+      )}
+
+      {hasPH && (
+        <>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#9aa4b2' }}>
+            Message Placeholders
+          </div>
+          <div className={styles.varsList} style={{ marginTop: 6 }}>
+            {placeholders.map((ph, i) => (
+              <div key={i} className={styles.varRow}>
+                <div className={styles.varName}>{ph.name || "Unnamed placeholder"}</div>
+                <textarea className={styles.varInput} value={ph.raw} readOnly />
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </>
   );
@@ -295,10 +354,12 @@ const VariablesPanelContent = ({ names, values, onChangeValue, onReset }) => {
 
 
 
+
+
 // ---------- 단일 패널 ----------
 
 
-const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
+const PlaygroundComponent = ({ PROJECT_ID, onCopy, onRemove, showRemoveButton, panelId, onRegisterRunner }) => {
   const [messages, setMessages] = useState([]);
 
   //변수 상태 추가 + 감지 useEffect
@@ -310,7 +371,8 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
   const [activePanel, setActivePanel] = useState(null); // 'tools' | 'schema' | null
   const [isSavePopoverOpen, setIsSavePopoverOpen] = useState(false);
   const [isStreamSettingsOpen, setIsStreamSettingsOpen] = useState(false);
-  const { projectId: PROJECT_ID, source, setProjectId } = useProjectId();
+
+
 
   //tool 기능 관련 선언
   const [attachedTools, setAttachedTools] = useState([]);
@@ -328,7 +390,11 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
   const [loadingSchemas, setLoadingSchemas] = useState(false);
   const [schemasError, setSchemasError] = useState(null);
 
-
+  //variables 관련
+  const [placeholders, setPlaceholders] = useState([]);
+  useEffect(() => {
+    setPlaceholders(extractPlaceholders(messages));
+  }, [messages]);
 
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
@@ -650,6 +716,33 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
 
   const canSubmit = hasContent && !!selectedProvider && !!selectedModel;
 
+  // placeholder를 실제 메시지로 펼치는 전처리
+  function expandPlaceholders(msgs) {
+    const out = [];
+    for (const m of msgs) {
+      if (m?.kind === "placeholder" || m?.role === "Placeholder") {
+        try {
+          const parsed = JSON.parse(m.content || "{}");
+          const arr = Array.isArray(parsed) ? parsed : [parsed];
+          for (const it of arr) {
+            if (it && typeof it.content === "string") {
+              out.push({
+                kind: "message",
+                role: (it.role || "user").toLowerCase(),
+                content: it.content,
+              });
+            }
+          }
+        } catch {
+          // 파싱 실패 시 무시(원하면 alert로 알려도 됨)
+        }
+      } else {
+        out.push(m);
+      }
+    }
+    return out;
+  }
+
   function toServerBody(messages) {
     const toRole = (role) => (role || "user").toLowerCase();
     const toType = (role) => {
@@ -742,9 +835,11 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
       return;
     }
     // 2) 변수 치환
-    const finalMessages = fillVariables(messages, varValues);
-    const body = toServerBody(finalMessages);
-
+    const replaced = fillVariables(messages, varValues);
+    // 3) placeholder 전개
+    const expanded = expandPlaceholders(replaced);
+    // 4) 바디 생성
+    const body = toServerBody(expanded);
 
     try {
       setIsSubmitting(true);
@@ -762,10 +857,13 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
     }
   }
 
-  //렌더 가드
-  if (PROJECT_ID === null) return <div className={styles.muted}>Loading project…</div>;
-  if (PROJECT_ID === "") return <div className={styles.errorText}>Project ID not found</div>;
-
+  // ▶ Run All을 위해 부모에게 내 submit 핸들 등록/해제
+  useEffect(() => {
+    if (typeof onRegisterRunner === "function") {
+      onRegisterRunner(panelId, handleSubmit);
+      return () => onRegisterRunner(panelId, null); // 언마운트/리렌더 시 해제
+    }
+  }, [panelId, onRegisterRunner, handleSubmit]);
 
   return (
     <div className={styles.panelContainer}>
@@ -900,7 +998,8 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
           <BookText size={14} /> Schema <span className={styles.badge}>{attachedUserSchema ? 1 : 0}</span>
         </button>
         <button className={styles.controlBtn} onClick={() => togglePanel("variables")}>
-          <Variable size={14} /> Variables <span className={styles.badge}>{varNames.length}</span>
+          <Variable size={14} /> Variables{" "}
+          <span className={styles.badge}>{varNames.length + placeholders.length}</span>
         </button>
       </div>
 
@@ -938,19 +1037,16 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
         </PlaygroundPanel>
       )}
 
-
       {activePanel === "variables" && (
         <PlaygroundPanel
           title="Variables & Message Placeholders"
           description={
             <>
               Configure variables and message placeholders for your prompts.
-
               <br />Use {"{{variable}}"} in any message to register it here.
             </>
           }
-          compact
-          floating
+
         >
 
           <VariablesPanelContent
@@ -958,12 +1054,21 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
             values={varValues}
             onChangeValue={(name, val) => setVarValues((p) => ({ ...p, [name]: val }))}
             onReset={() => setVarValues(Object.fromEntries(varNames.map((n) => [n, ""])))}
+            placeholders={placeholders}
           />
         </PlaygroundPanel>
       )}
 
+
       {/* Messages */}
-      <ChatBox messages={messages} setMessages={setMessages} />
+      <ChatBox
+        value={messages}
+        onChange={setMessages}
+        schema="kind"           // 프롬프트 팀이면 "rolePlaceholder"
+        autoInit={true}
+      />
+
+
 
       {/* Output */}
       <div className={styles.outputCard}>
@@ -976,6 +1081,8 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
           </pre>
         </div>
       </div>
+
+
 
       {/* Footer full-width Submit + Right controls */}
       <div className={styles.footerBar}>
@@ -1091,12 +1198,85 @@ const PlaygroundComponent = ({ onCopy, onRemove, showRemoveButton }) => {
 
 // ---------- 메인 ----------
 export default function Playground() {
+
   const [panels, setPanels] = useState([Date.now()]);
   const addPanel = () => setPanels((prev) => [...prev, Date.now()]);
   const removePanel = (idToRemove) => {
     if (panels.length > 1) setPanels((prev) => prev.filter((id) => id !== idToRemove));
   };
   const resetPlayground = () => setPanels([Date.now()]);
+
+  // ▶ 각 패널의 submit 함수를 보관할 레지스트리
+  const runnersRef = useRef(new Map()); // key: panelId, val: async () => void
+  const registerRunner = (id, fn) => {
+    if (typeof fn === "function") runnersRef.current.set(id, fn);
+    else runnersRef.current.delete(id);
+  };
+
+  // ▶ Run All: 열린 패널 순서대로 실행(순차). 병렬 원하면 Promise.allSettled로 교체.
+  const [runningAll, setRunningAll] = useState(false);
+  const runAll = async () => {
+    if (runningAll) return;
+    setRunningAll(true);
+    try {
+      for (const id of panels) {
+        const run = runnersRef.current.get(id);
+        if (typeof run === "function") {
+          await run(); // 필요하면 await run(true) 처럼 스트리밍 플래그 전달 가능
+        }
+      }
+    } finally {
+      setRunningAll(false);
+    }
+  };
+
+  // ▶ 단축키: Ctrl+Enter 로 Run All
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        runAll();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [panels, runningAll]); // panels 바뀌면 최신 순서 반영
+
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+
+  // URL의 :projectId (라우트 파라미터)
+  const { projectId: routeProjectId } = useParams(); // URL의 :projectId
+  // 세션 멤버십으로 검증된 최종 projectId
+  const { projectId: resolvedId } = useProjectId({
+    location,
+    validateAgainstSession: true,
+  });
+
+
+  // URL의 :projectId 가 내 멤버십으로 정해진 resolvedId 와 다르면 ➜ 정규 경로로 교체
+  useEffect(() => {
+    if (routeProjectId && resolvedId && routeProjectId !== resolvedId) {
+      navigate(`/project/${resolvedId}/playground`, { replace: true });
+    }
+  }, [routeProjectId, resolvedId, navigate]);
+
+  // ✅ 이후에는 resolvedId 를 신뢰하여 데이터 요청
+  //   (패널들에는 prop 으로 내려주고, 내부에서 또 useProjectId() 호출하지 않기)
+
+
+
+  // 훅이 결정되기 전
+  if (resolvedId === null) return null;
+
+  // 어떤 후보도 멤버십에 없어서 실패 → /playground(게이트)로 보내 Gate배너 띄우기 (projectId 수기입력)
+  if (resolvedId === "") {
+    return <Navigate to="/playground" replace />;
+  }
+
+
 
   return (
     <div className={styles.container}>
@@ -1106,8 +1286,8 @@ export default function Playground() {
         <button className={styles.actionBtn} onClick={addPanel}>
           <Plus size={16} /> Add Panel
         </button>
-        <button className={styles.actionBtn} onClick={() => { /* TODO: Run All 연결 */ }}>
-          <Play size={16} /> Run All (Ctrl + Enter)
+        <button className={styles.actionBtn} onClick={runAll} disabled={runningAll} title="Ctrl + Enter">
+          <Play size={16} /> {runningAll ? "Running..." : "Run All (Ctrl + Enter)"}
         </button>
         <button className={styles.actionBtn} onClick={resetPlayground}>
           <RotateCcw size={16} /> Reset playground
@@ -1118,9 +1298,12 @@ export default function Playground() {
         {panels.map((id) => (
           <PlaygroundComponent
             key={id}
+            PROJECT_ID={resolvedId}
             onCopy={addPanel}
             onRemove={() => removePanel(id)}
             showRemoveButton={panels.length > 1}
+            panelId={id}
+            onRegisterRunner={registerRunner}
           />
         ))}
       </div>

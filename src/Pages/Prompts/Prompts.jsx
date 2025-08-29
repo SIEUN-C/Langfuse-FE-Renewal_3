@@ -1,7 +1,8 @@
-// src/pages/Prompts/Prompts.jsx
-import React, { useState, useEffect } from 'react';
+// src/Pages/Prompts/Prompts.jsx
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // useCallback 추가
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './Prompts.module.css';
+import useProjectId from 'hooks/useProjectId';
 import {
   Info,
   Plus,
@@ -14,10 +15,107 @@ import {
   ChevronsRight,
   Tag,
 } from 'lucide-react';
-import { fetchPrompts } from './promptsApi.js';
+import { fetchPrompts, deletePrompt, updatePromptTags } from './promptsApi.js';
 import SearchInput from '../../components/SearchInput/SearchInput.jsx';
 import { useSearch } from '../../hooks/useSearch.js';
 
+//--- TagEditor 컴포넌트를 Prompts.jsx 파일 내부에 직접 정의 ---
+const TagEditor = ({ promptName, tags, onSave, onClose, anchorEl, projectId }) => {
+  const [currentTags, setCurrentTags] = useState(tags || []);
+  const [inputValue, setInputValue] = useState('');
+  const popoverRef = useRef(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + window.scrollY + 5,
+        left: rect.left + window.scrollX - 125 + (rect.width / 2),
+      });
+    }
+  }, [anchorEl]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target) && !anchorEl.contains(event.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose, anchorEl]);
+
+
+  const saveTagsToApi = useCallback(async (tagsToSave) => {
+    try {
+      // [수정] updatePromptTags 호출 시 projectId를 전달합니다. (이미 props로 받고 있음)
+      await updatePromptTags(promptName, tagsToSave, projectId);
+      onSave(tagsToSave);
+    } catch (error) {
+      alert(`Failed to save tags: ${error.message}`);
+      console.error(error);
+    }
+  }, [promptName, projectId, onSave]);
+
+
+  const handleKeyDown = async (e) => {
+    if (e.key === 'Enter' && inputValue.trim()) {
+      e.preventDefault();
+      const newTag = inputValue.trim();
+      if (!currentTags.includes(newTag)) {
+        const updatedTags = [...currentTags, newTag];
+        setCurrentTags(updatedTags);
+        setInputValue('');
+        await saveTagsToApi(updatedTags);
+      } else {
+        setInputValue('');
+      }
+    } else if (e.key === 'Backspace' && inputValue === '' && currentTags.length > 0) {
+      e.preventDefault();
+      const updatedTags = currentTags.slice(0, -1);
+      setCurrentTags(updatedTags);
+      await saveTagsToApi(updatedTags);
+    }
+  };
+
+  const removeTag = async (tagToRemove) => {
+    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+    setCurrentTags(updatedTags);
+    await saveTagsToApi(updatedTags);
+  };
+
+  if (!anchorEl) return null;
+
+  return (
+    <div ref={popoverRef} className={styles.tagEditorPopover} style={position}>
+      <div className={styles.tagEditorHeader}>
+        <span className={styles.tagEditorTitle}>Prompt Tags</span>
+      </div>
+      <div className={styles.tagInputContainer}>
+        {currentTags.map(tag => (
+          <span key={tag} className={styles.tagEditorTag}>
+            {tag}
+            <button onClick={() => removeTag(tag)} className={styles.removeTagBtn}>×</button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={currentTags.length === 0 ? "Add tags..." : ""}
+          className={styles.tagEditorInput}
+          autoFocus
+        />
+      </div>
+      {/* Save 버튼이 있던 footer 제거 */}
+      {/* <div className={styles.tagEditorFooter}>
+        <button onClick={handleSave} className={styles.saveButton}>Save</button>
+      </div> */}
+    </div>
+  );
+};
 
 const Prompts = () => {
   const [prompts, setPrompts] = useState([]);
@@ -25,44 +123,40 @@ const Prompts = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [promptToDelete, setPromptToDelete] = useState(null);
-  
+  const [editingPrompt, setEditingPrompt] = useState(null);
+  const [tagEditorAnchor, setTagEditorAnchor] = useState(null);
+
   const [searchType, setSearchType] = useState('Names, Tags');
   const { searchQuery, setSearchQuery, filteredData: filteredPrompts } = useSearch(prompts, searchType);
 
+  // [수정] useProjectId 훅에서 projectId 값을 구조분해 할당으로 가져옵니다.
+  const { projectId } = useProjectId();
+
   useEffect(() => {
+    // [수정] projectId가 아직 로드되지 않았다면 API 호출을 시도하지 않습니다.
+    if (!projectId) {
+      setIsLoading(false);
+      return;
+    }
+
     const loadPrompts = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        
-        const formattedPrompts = await fetchPrompts();
+
+        // [수정] fetchPrompts 호출 시 현재 projectId를 인자로 전달합니다.
+        const formattedPrompts = await fetchPrompts(projectId);
         setPrompts(formattedPrompts);
       } catch (err) {
         console.error("Failed to fetch prompts:", err);
-        if (err.response) { // Simplified error check for JS
-          if (!err.response) {
-            setError(
-              "Network Error: Failed to fetch. This might be a CORS issue. " +
-              "Please check if your Langfuse project's 'Allowed Origins' includes your development URL (e.g., http://localhost:5173)."
-            );
-          } else if (err.response.status === 401 || err.response.status === 403) {
-            setError(
-              "Authentication Failed: The provided API Keys or Base URL are incorrect. " +
-              "Please verify your .env file."
-            );
-          } else {
-            setError(`An API error occurred: ${err.response.status} ${err.response.statusText}`);
-          }
-        } else {
-          setError("An unexpected error occurred. Please check the console.");
-        }
+        setError(err.message || "An unexpected error occurred.");
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadPrompts();
-  }, []);
+  }, [projectId]); // [수정] projectId가 변경될 때마다 프롬프트 목록을 다시 불러오도록 의존성 배열에 추가합니다.
 
   const navigateToNewPrompts = () => {
     navigate("/prompts/new");
@@ -79,11 +173,37 @@ const Prompts = () => {
     setPromptToDelete(prev => (prev?.id === prompt.id ? null : prompt));
   };
 
-  const confirmDelete = () => {
+  const handleTagClick = (e, prompt) => {
+    e.stopPropagation();
+    if (editingPrompt && editingPrompt.id === prompt.id) {
+      setEditingPrompt(null);
+      setTagEditorAnchor(null);
+    } else {
+      setTagEditorAnchor(e.currentTarget);
+      setEditingPrompt(prompt);
+    }
+  };
+
+  const handleSaveTags = (newTags) => {
+    if (!editingPrompt) return;
+    setPrompts(prompts.map(p =>
+      p.id === editingPrompt.id ? { ...p, tags: newTags } : p
+    ));
+  };
+
+  const confirmDelete = async () => {
     if (!promptToDelete) return;
-    setPrompts(currentPrompts => currentPrompts.filter(p => p.id !== promptToDelete.id));
-    console.log(`프롬프트 "${promptToDelete.name}"가 삭제되었습니다.`);
-    setPromptToDelete(null);
+
+    try {
+      // [수정] deletePrompt 호출 시 prompt 이름과 현재 projectId를 함께 전달합니다.
+      await deletePrompt(promptToDelete.name, projectId);
+      setPrompts(currentPrompts => currentPrompts.filter(p => p.id !== promptToDelete.id));
+      console.log(`프롬프트 "${promptToDelete.name}"가 성공적으로 삭제되었습니다.`);
+      setPromptToDelete(null);
+    } catch (error) {
+      alert(error.message);
+      console.error(error);
+    }
   };
 
   return (
@@ -147,17 +267,17 @@ const Prompts = () => {
                     <td><div className={styles.observationCell}>{formatObservations(prompt.observations)}</div></td>
                     <td>
                       <div className={styles.tagsCell}>
-                        {prompt.tags && prompt.tags.length > 0 ? (
-                          prompt.tags.map(tag => (
-                            <span key={tag} className={styles.tagPill}>
-                              {tag}
-                            </span>
-                          ))
-                        ) : (
-                          <button className={styles.iconButton} onClick={() => alert('Add tags!')}>
+                        <button className={styles.iconButton} onClick={(e) => handleTagClick(e, prompt)}>
+                          {prompt.tags && prompt.tags.length > 0 ? (
+                            prompt.tags.map(tag => (
+                              <span key={tag} className={styles.tagPill}>
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
                             <Tag size={16} />
-                          </button>
-                        )}
+                          )}
+                        </button>
                       </div>
                     </td>
                     <td>
@@ -209,6 +329,21 @@ const Prompts = () => {
           <button className={styles.iconButton} disabled><ChevronsRight size={18} /></button>
         </div>
       </div>
+
+      {/* TagEditor 렌더링 로직 */}
+      {editingPrompt && (
+        <TagEditor
+          promptName={editingPrompt.name}
+          tags={editingPrompt.tags}
+          onSave={handleSaveTags}
+          onClose={() => {
+            setEditingPrompt(null);
+            setTagEditorAnchor(null);
+          }}
+          anchorEl={tagEditorAnchor}
+          projectId={projectId}
+        />
+      )}
     </div>
   );
 };
