@@ -1,5 +1,5 @@
 // src/components/ProjectGate.jsx
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import useProjectId from "../../hooks/useProjectId";
 import ProjectIdBanner from "./ProjectIdBanner";
 
@@ -11,7 +11,9 @@ import ProjectIdBanner from "./ProjectIdBanner";
  * 이 컴포넌트는 어떤 페이지에도 재사용 가능 (예: Datasets, Sessions 등).
  */
 export default function ProjectGate() {
-    const { projectId, setProjectId } = useProjectId();
+
+    const location = useLocation();
+    const { projectId } = useProjectId({ location, validateAgainstSession: true });
 
     // 훅이 아직 URL/쿼리/localStorage를 탐색 중인 상태
     if (projectId === null) return null;

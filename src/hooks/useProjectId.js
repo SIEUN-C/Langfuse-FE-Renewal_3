@@ -3,125 +3,129 @@ import { useEffect, useMemo, useState } from "react";
 
 const LS_KEY = "activeProjectId";
 
-// projectId로 "그럴싸한" 값만 허용 (너무 엄격 X)
+// -------- helpers --------
 function isLikelyProjectId(s) {
     if (typeof s !== "string") return false;
-    const trimmed = s.trim();
-    if (!trimmed) return false;
-    if (trimmed.length < 8 || trimmed.length > 64) return false; // 느슨한 길이 제한
-    if (/[<>\s%]/.test(trimmed)) return false; // 각괄호/공백/% 는 절대 아님
-    if (/^(undefined|null|projectId)$/i.test(trimmed)) return false;
-    // 보통 영숫자/하이픈/언더스코어 조합
-    if (!/^[a-z0-9_-]+$/i.test(trimmed)) return false;
-    return true;
+    const t = s.trim();
+    if (!t) return false;
+    if (t.length < 8 || t.length > 64) return false;
+    if (/[<>\s%]/.test(t)) return false;
+    if (/^(undefined|null|projectId)$/i.test(t)) return false;
+    return /^[a-z0-9_-]+$/i.test(t);
+}
+
+// 세션 한 번만 가져오도록 모듈 레벨 캐시
+let _sessionCachePromise = null;
+async function getSession() {
+    if (!_sessionCachePromise) {
+        _sessionCachePromise = fetch("/api/auth/session", { credentials: "include" })
+            .then(r => (r.ok ? r.json() : null))
+            .catch(() => null);
+    }
+    return _sessionCachePromise;
+}
+
+// 세션에서 “내가 속한 프로젝트 ID들” 집합 만들기
+async function getMyProjectSetFromSession() {
+    const s = await getSession();
+    const ids = new Set();
+    if (!s) return ids;
+
+    // ✅ 네 환경 스키마
+    const orgs = s?.user?.organizations;
+    if (Array.isArray(orgs)) {
+        for (const org of orgs) {
+            const ps = org?.projects;
+            if (Array.isArray(ps)) for (const p of ps) if (p?.id) ids.add(p.id);
+        }
+    }
+
+    // ✅ 레거시/다른 배포 스키마도 겸사겸사
+    if (Array.isArray(s?.memberships)) s.memberships.forEach(m => m?.projectId && ids.add(m.projectId));
+    if (s?.activeProjectId) ids.add(s.activeProjectId);
+    if (s?.defaultProjectId) ids.add(s.defaultProjectId);
+    if (s?.project?.id) ids.add(s.project.id);
+
+    return ids;
 }
 
 export default function useProjectId(opts = {}) {
     const {
         location,
         sourcePriority = ["path", "query", "localStorage", "session"],
+        validateAgainstSession = true,
     } = opts;
 
-    const [projectId, setProjectIdState] = useState(null); // null=로딩, ""=없음, "abc"=OK
+    const [projectId, setProjectIdState] = useState(null); // null=로딩, ""=없음
     const [source, setSource] = useState("");
 
     useEffect(() => {
-        if (typeof window === "undefined") {
-            setProjectIdState("");
-            return;
-        }
+        let cancelled = false;
 
-        const pathname = location?.pathname ?? window.location.pathname;
-        const search = location?.search ?? window.location.search;
+        (async () => {
+            const pathname = location?.pathname ?? window.location.pathname;
+            const search = location?.search ?? window.location.search;
 
-        // 저장 + 출처 기록 + localStorage 반영
-        const setAndPersist = (pid, src) => {
-            setProjectIdState(pid);
-            setSource(src);
-            try { localStorage.setItem(LS_KEY, pid); } catch { }
-        };
-
-        // 1) /project/:id
-        if (sourcePriority.includes("path")) {
-            const m = pathname.match(/\/project\/([^/]+)/);
-            if (m?.[1] && isLikelyProjectId(m[1])) {
-                setAndPersist(m[1], "path");
-                return;
+            // 후보를 우선순위대로 모으기
+            const candidates = [];
+            if (sourcePriority.includes("path")) {
+                const m = pathname.match(/\/project\/([^/]+)/);
+                if (m?.[1] && isLikelyProjectId(m[1])) candidates.push({ id: m[1], src: "path" });
             }
-        }
-
-        // 2) ?projectId=...
-        if (sourcePriority.includes("query")) {
-            const qsId = new URLSearchParams(search).get("projectId");
-            if (qsId && isLikelyProjectId(qsId)) {
-                setAndPersist(qsId, "query");
-                return;
+            if (sourcePriority.includes("query")) {
+                const qs = new URLSearchParams(search).get("projectId");
+                if (qs && isLikelyProjectId(qs)) candidates.push({ id: qs, src: "query" });
             }
-        }
-
-        // 3) localStorage
-        if (sourcePriority.includes("localStorage")) {
-            const lsId = localStorage.getItem(LS_KEY);
-            if (lsId && isLikelyProjectId(lsId)) {
-                setProjectIdState(lsId);
-                setSource("localStorage");
-                return;
-            } else if (lsId) {
-                // 이상한 값이면 치워버리자
-                try { localStorage.removeItem(LS_KEY); } catch { }
+            if (sourcePriority.includes("localStorage")) {
+                const ls = localStorage.getItem(LS_KEY);
+                if (ls && isLikelyProjectId(ls)) candidates.push({ id: ls, src: "localStorage" });
             }
-        }
 
-        // 4) 세션 추정 (환경에 따라 스키마 다르므로 느슨하게)
-        if (sourcePriority.includes("session")) {
-            (async () => {
-                try {
-                    const r = await fetch("/api/auth/session", { credentials: "include" });
-                    if (!r.ok) {
-                        setProjectIdState("");
-                        setSource("session:401");
-                        return;
-                    }
-                    const s = await r.json();
-                    const pid =
-                        s?.project?.id ||
-                        s?.activeProjectId ||
-                        s?.defaultProjectId ||
-                        (Array.isArray(s?.memberships) ? s.memberships[0]?.projectId : undefined);
+            let chosen = null;
 
-                    if (isLikelyProjectId(pid)) {
-                        setAndPersist(pid, "session");
-                    } else {
-                        setProjectIdState("");
-                        setSource("session:empty");
-                    }
-                } catch {
-                    setProjectIdState("");
-                    setSource("session:error");
+            if (validateAgainstSession) {
+                const my = await getMyProjectSetFromSession().catch(() => new Set());
+                // 1) 후보들 중 멤버십에 있는 첫 번째
+                chosen = candidates.find(c => my.has(c.id)) || null;
+                // 2) 없으면 세션의 첫 프로젝트로
+                if (!chosen) {
+                    const first = Array.from(my)[0];
+                    if (first) chosen = { id: first, src: "session" };
                 }
-            })();
-        } else {
-            setProjectIdState("");
-            setSource("session:skipped");
-        }
-    }, [location?.pathname, location?.search, sourcePriority.join("|")]);
+            } else {
+                chosen = candidates[0] || null;
+                if (!chosen && sourcePriority.includes("session")) {
+                    const my = await getMyProjectSetFromSession().catch(() => new Set());
+                    const first = Array.from(my)[0];
+                    if (first) chosen = { id: first, src: "session" };
+                }
+            }
 
-    // 수동 지정 + 저장
+            if (cancelled) return;
+
+            if (chosen) {
+                try { localStorage.setItem(LS_KEY, chosen.id); } catch { }
+                setProjectIdState(chosen.id);
+                setSource(chosen.src);
+            } else {
+                setProjectIdState("");
+                setSource("not-found");
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [location?.pathname, location?.search, sourcePriority.join("|"), validateAgainstSession]);
+
     const setProjectId = (pid) => {
-        const ok = isLikelyProjectId(pid);
-        if (ok) {
+        if (isLikelyProjectId(pid)) {
             try { localStorage.setItem(LS_KEY, pid); } catch { }
             setProjectIdState(pid);
             setSource("manual");
         } else {
-            // 잘못된 입력은 무시 (배너에서 실수로 <> 넣는 상황 방지)
             setProjectIdState("");
             setSource("manual:invalid");
         }
     };
 
-    return useMemo(
-        () => ({ projectId, source, setProjectId }),
-        [projectId, source]
-    );
+    return useMemo(() => ({ projectId, source, setProjectId }), [projectId, source]);
 }
