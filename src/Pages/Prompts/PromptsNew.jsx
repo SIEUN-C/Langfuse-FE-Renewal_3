@@ -1,5 +1,4 @@
-// PromptsNew.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './PromptsNew.module.css';
 import { Book } from 'lucide-react';
@@ -9,11 +8,7 @@ import LineNumberedTextarea from '../../components/LineNumberedTextarea/LineNumb
 import FormPageLayout from '../../components/Layouts/FormPageLayout.jsx';
 import FormGroup from '../../components/Form/FormGroup.jsx';
 import { createPromptOrVersion } from './PromptsNewApi.js';
-import useProjectId from 'hooks/useProjectId'; // [추가] useProjectId 훅을 import 합니다.
-
-const ForwardedLineNumberedTextarea = React.forwardRef((props, ref) => (
-    <LineNumberedTextarea {...props} forwardedRef={ref} />
-));
+import useProjectId from 'hooks/useProjectId';
 
 const PromptsNew = () => {
     const navigate = useNavigate();
@@ -23,18 +18,17 @@ const PromptsNew = () => {
     const initialState = location.state || {};
     const [promptName, setPromptName] = useState(initialState.promptName || '');
     const [promptType, setPromptType] = useState(initialState.promptType || 'Chat');
-    const [chatContent, setChatContent] = useState(initialState.chatContent || [
-        { id: Date.now(), role: 'System', content: '' },
-    ]);
+    const [chatContent, setChatContent] = useState(initialState.chatContent || []);
     const [textContent, setTextContent] = useState(initialState.textContent || '');
     const [config, setConfig] = useState(initialState.config || '{\n  "temperature": 1\n}');
-    const [labels, setLabels] = useState(initialState.labels || { production: true }); // Default to true for better UX
+    const [labels, setLabels] = useState(initialState.labels || { production: true });
     const [commitMessage, setCommitMessage] = useState('');
     const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false);
     const [variables, setVariables] = useState([]);
     const isNewVersionMode = initialState.isNewVersion || false;
-    const textPromptRef = useRef(null);
-
+    
+    // 오류 메시지 상태 추가
+    const [saveError, setSaveError] = useState('');
 
     useEffect(() => {
         const extractVariables = (text) => {
@@ -50,11 +44,9 @@ const PromptsNew = () => {
             const chatVars = chatContent.flatMap(msg => extractVariables(msg.content));
             allVars = [...chatVars];
         }
-
         setVariables([...new Set(allVars)]);
     }, [textContent, chatContent, promptType]);
-
-
+    
     const handleLabelChange = (e) => {
         const { name, checked } = e.target;
         setLabels((prev) => ({ ...prev, [name]: checked }));
@@ -64,44 +56,34 @@ const PromptsNew = () => {
         if (promptType === 'Text') {
             setTextContent((prev) => prev + referenceTag);
         } else {
-            // Chat 모드일 경우, 태그를 클립보드에 복사하고 안내 메시지를 표시합니다.
             navigator.clipboard.writeText(referenceTag).then(() => {
-                alert(`Reference tag copied to clipboard. Please paste it into the desired message.\n\nCopied: ${referenceTag}`);
-            }).catch(err => {
-                console.error("클립보드 복사 실패:", err);
-                alert("클립보드 복사에 실패했습니다. 수동으로 복사해주세요.");
+                alert(`참조 태그가 클립보드에 복사되었습니다: ${referenceTag}`);
             });
         }
     };
 
-
     const handleSave = async () => {
+        setSaveError(''); // 저장 시도 시 오류 메시지 초기화
         if (!projectId) {
-            alert("Project is not selected. Please select a project first.");
+            setSaveError("오류: 프로젝트가 선택되지 않았습니다.");
             return;
         }
 
         try {
-            // [수정] createPromptOrVersion 호출 시, 파라미터 객체와 projectId를 함께 전달합니다.
-            await createPromptOrVersion(
-                {
-                    promptName,
-                    promptType,
-                    chatContent,
-                    textContent,
-                    config,
-                    labels,
-                    commitMessage,
-                },
-                projectId
-            );
-
-            alert(`'${promptName}' prompt's new version has been saved successfully.`);
+            await createPromptOrVersion({
+                promptName, promptType, chatContent, textContent,
+                config, labels, commitMessage
+            }, projectId);
+            alert(`'${promptName}' 프롬프트의 새 버전이 성공적으로 저장되었습니다.`);
             navigate(`/prompts/${promptName}`);
         } catch (err) {
             console.error("Failed to save prompt:", err);
-            // [수정] API에서 반환된 에러 메시지를 직접 사용합니다.
-            alert(`Failed to save prompt: ${err.message}`);
+            const errorMessage = err.message || "알 수 없는 오류가 발생했습니다.";
+            if (errorMessage.includes('Circular dependency')) {
+                setSaveError(`오류: 자기 자신을 참조할 수 없습니다. 다른 프롬프트를 선택해주세요.`);
+            } else {
+                setSaveError(`저장 실패: ${errorMessage}`);
+            }
         }
     };
 
@@ -128,6 +110,7 @@ const PromptsNew = () => {
             onSave={handleSave}
             onCancel={() => navigate(isNewVersionMode ? `/prompts/${promptName}` : '/prompts')}
             isSaveDisabled={!promptName.trim()}
+            saveError={saveError}
         >
             <FormGroup
                 htmlFor="prompt-name"
@@ -152,37 +135,23 @@ const PromptsNew = () => {
             >
                 <div className={styles.promptHeader}>
                     <div className={styles.typeSelector}>
-                        <button
-                            className={`${styles.typeButton} ${promptType === 'Chat' ? styles.active : ''}`}
-                            onClick={() => setPromptType('Chat')}
-                            disabled={isNewVersionMode}
-                        >
-                            Chat
-                        </button>
-                        <button
-                            className={`${styles.typeButton} ${promptType === 'Text' ? styles.active : ''}`}
-                            onClick={() => setPromptType('Text')}
-                            disabled={isNewVersionMode}
-                        >
-                            Text
-                        </button>
+                        <button className={`${styles.typeButton} ${promptType === 'Chat' ? styles.active : ''}`} onClick={() => setPromptType('Chat')} disabled={isNewVersionMode}>Chat</button>
+                        <button className={`${styles.typeButton} ${promptType === 'Text' ? styles.active : ''}`} onClick={() => setPromptType('Text')} disabled={isNewVersionMode}>Text</button>
                     </div>
-                    {/* This button was misplaced in the original code. It should be outside the textarea. */}
                     <button className={styles.addReferenceButton} onClick={() => setIsReferenceModalOpen(true)}>
                         + Add prompt reference
                     </button>
                 </div>
                 {promptType === 'Text' ? (
-                    <ForwardedLineNumberedTextarea
+                    <LineNumberedTextarea
                         id="prompt-content"
                         value={textContent}
                         onChange={(e) => setTextContent(e.target.value)}
                         placeholder='Enter your text prompt here, e.g. "Summarize this: {{text}}"'
                         minHeight={200}
-                        ref={textPromptRef} // Pass ref here
                     />
                 ) : (
-                    <ChatBox //프롬프트팀
+                    <ChatBox
                         value={chatContent}
                         onChange={setChatContent}
                         schema="rolePlaceholder"
@@ -193,9 +162,7 @@ const PromptsNew = () => {
                     <div className={styles.variablesContainer}>
                         <span className={styles.variablesLabel}>VARIABLES:</span>
                         {variables.map((variable, index) => (
-                            <span key={index} className={styles.variableTag}>
-                                {variable}
-                            </span>
+                            <span key={index} className={styles.variableTag}>{variable}</span>
                         ))}
                     </div>
                 )}

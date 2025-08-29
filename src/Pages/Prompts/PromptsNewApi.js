@@ -52,7 +52,7 @@ export const createPromptOrVersion = async (params, projectId) => { // [수정] 
   } catch (error) {
     console.error("Failed to create prompt via tRPC:", error);
     // [수정] 에러 메시지를 좀 더 구체적으로 전달합니다.
-    const errorMessage = error.response?.data?.error?.message || "An unknown error occurred while creating the prompt.";
+    const errorMessage = error.response?.data?.error?.json?.message || "An unknown error occurred while creating the prompt.";
     throw new Error(errorMessage);
   }
 };

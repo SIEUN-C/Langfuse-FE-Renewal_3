@@ -81,3 +81,19 @@
   color: #f1f5f9;
   font-weight: 500;
 }
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  align-items: center; /* 추가 */
+}
+
+/* ▼▼▼ 이 코드를 파일 맨 끝에 추가하세요 ▼▼▼ */
+.errorMessage {
+  color: #f87171; /* 눈에 띄는 빨간색 계열 */
+  font-size: 14px;
+  margin: 0;
+  margin-right: auto; /* 메시지를 왼쪽으로 정렬 */
+  padding-right: 16px;
+}
