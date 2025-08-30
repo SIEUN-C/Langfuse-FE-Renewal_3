@@ -149,7 +149,7 @@ export default function Layout({ session }) {
     // Playground 경로를 위한 특별 로직을 추가합니다.
     const isPathActive = (path) => {
         if (path === "/playground") {
-        return location.pathname.includes("/playground");
+            return location.pathname.includes("/playground");
         }
         // 기존 로직은 `NavLink`의 `isActive`에 의존하거나 `startsWith`를 사용합니다.
         return !!matchPath({ path, end: path === "/" }, location.pathname) ||
@@ -269,7 +269,7 @@ export default function Layout({ session }) {
                             <NavLink
                                 key={item.label}
                                 to={item.path}
-                                className={navClass}
+                                className={navClass(item.path)}
                                 title={collapsed ? item.label : undefined}
                                 aria-label={collapsed ? item.label : undefined}
                                 role="menuitem"
