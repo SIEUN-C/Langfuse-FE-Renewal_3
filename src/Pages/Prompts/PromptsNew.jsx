@@ -4,7 +4,8 @@ import styles from './PromptsNew.module.css';
 import { Book } from 'lucide-react';
 import PromptsReference from './PromptsReference.jsx';
 import ChatBox from '../../components/ChatBox/ChatBox.jsx';
-import LineNumberedTextarea from '../../components/LineNumberedTextarea/LineNumberedTextarea.jsx';
+// import LineNumberedTextarea from '../../components/LineNumberedTextarea/LineNumberedTextarea.jsx'; // --- 1. [수정] 기존 LineNumberedTextarea import 제거 ---
+import CodeBlock from '../../components/CodeBlock/CodeBlock.jsx'; // --- 2. [수정] CodeBlock 컴포넌트 import 추가 ---
 import FormPageLayout from '../../components/Layouts/FormPageLayout.jsx';
 import FormGroup from '../../components/Form/FormGroup.jsx';
 import { createPromptOrVersion } from './PromptsNewApi.js';
@@ -173,7 +174,11 @@ const PromptsNew = () => {
                 label="Config"
                 subLabel="Arbitrary JSON configuration that is available on the prompt."
             >
-                <LineNumberedTextarea id="prompt-config" value={config} onChange={(e) => setConfig(e.target.value)} />
+                {/* --- 3. [수정] LineNumberedTextarea를 CodeBlock 컴포넌트로 교체하고 props를 맞게 수정 --- */}
+                <CodeBlock
+                    code={config}
+                    onChange={setConfig}
+                />
             </FormGroup>
 
             <FormGroup
