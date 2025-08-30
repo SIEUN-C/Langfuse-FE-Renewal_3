@@ -18,6 +18,9 @@ import styles from "./Layout.module.css";
 import PageHeader from "../components/PageHeader/PageHeader";
 
 export default function Layout({ session }) {
+
+    //session prop이 제대로 들어오는지 확인(계정값 깨짐 현상 확인용-> 문제없음 App.jsx 수정)
+    //console.log("Layout 컴포넌트가 받은 session prop:", session); // <--- 이 줄을 추가하세요
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -269,7 +272,7 @@ export default function Layout({ session }) {
                             <NavLink
                                 key={item.label}
                                 to={item.path}
-                                className={navClass}
+                                className={navClass(item.path)} /* <--- 이렇게 수정해 주세요. */
                                 title={collapsed ? item.label : undefined}
                                 aria-label={collapsed ? item.label : undefined}
                                 role="menuitem"

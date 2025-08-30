@@ -66,11 +66,17 @@ export default function App() {
     return <div>Loading...</div>;
   }
 
+
   return (
     <Routes>
       {/* 로그인 */}
       <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
-      <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
+
+      {/* ❌ 이 중복된 라인을 삭제합니다. */}
+      {/* <Route path="/" element={session ? <Layout session={session} /> : <Navigate to="/login" />}></Route> */}
+      
+      {/* ✅ 그리고 원래 있던 이 라인에 session={session}을 추가합니다. */}
+      <Route path="/" element={session ? <Layout session={session} /> : <Navigate to="/login" />}>
 
         {/* 홈 -> /trace 경로로 리디렉션 */}
         <Route index element={<Navigate to="/trace" replace />} />
@@ -86,27 +92,13 @@ export default function App() {
         <Route path="prompts/new" element={<PromptsNew />} />
 
         {/* Playground */}
-        {/* ✅ 표준 경로: URL에서 projectId를 직접 읽어 사용 */}
         <Route path="project/:projectId/playground" element={<Playground />} />
-
-        {/* ✅ 짧은 경로: 게이트가 projectId를 찾아 표준 경로로 리다이렉트 또는 배너 표시 */}
-        {/* 👇 기존: <Route path="playground" element={<Playground />} /> 를 교체 */}
         <Route path="playground" element={<ProjectGate />} />
 
-        {/* <Route path="llm-as-a-judge" element={<JudgePage />} /> */}
-
-        {/* <Route path="evaluation" element={<Navigate to="/scores" replace />} />
-        <Route path="evaluation/new" element={<Navigate to="/scores/new" replace />} />
-        <Route path="evaluation/:id" element={<Navigate to="/scores/:id" replace />} />
-        <Route path="evaluation/:id/edit" element={<Navigate to="/scores/:id/edit" replace />} /> */}
-
-        {/* <Route path="dashboards" element={<Dashboards />} />
-        <Route path="dashboards/new" element={<DashboardNew />} />
-        <Route path="dashboards/widgets/new" element={<WidgetNew />} />
-        <Route path="dashboards/:dashboardId" element={<DashboardDetail />} /> */}
-
+        {/* Settings */}
         <Route path="settings" element={<SettingsPage />}>
           <Route index element={<General />} />
+          <Route path="api-keys" element={<ApiKeys />} /> {/* 이 라인이 빠져있어서 추가했습니다. */}
           <Route path="llm-connections" element={<LLMConnections />} />
           <Route path="models" element={<Models />} />
           <Route path="scores" element={<Scores />} />
@@ -117,3 +109,56 @@ export default function App() {
     </Routes>
   );
 }
+
+// 이전 코드 (참고용- settings, 계정 layout 깨짐현상)
+  // return (
+  //   <Routes>
+  //     {/* 로그인 */}
+  //     <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
+  //     <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
+
+  //       {/* 홈 -> /trace 경로로 리디렉션 */}
+  //       <Route index element={<Navigate to="/trace" replace />} />
+
+  //       {/* Tracing */}
+  //       <Route path="trace" element={<Tracing />} />
+  //       <Route path="sessions" element={<Sessions />} />
+  //       <Route path="sessions/:sessionId" element={<SessionDetail />} />
+
+  //       {/* Prompts */}
+  //       <Route path="prompts" element={<Prompts />} />
+  //       <Route path="prompts/:id" element={<PromptsDetail />} />
+  //       <Route path="prompts/new" element={<PromptsNew />} />
+
+  //       {/* Playground */}
+  //       {/* ✅ 표준 경로: URL에서 projectId를 직접 읽어 사용 */}
+  //       <Route path="project/:projectId/playground" element={<Playground />} />
+
+  //       {/* ✅ 짧은 경로: 게이트가 projectId를 찾아 표준 경로로 리다이렉트 또는 배너 표시 */}
+  //       {/* 👇 기존: <Route path="playground" element={<Playground />} /> 를 교체 */}
+  //       <Route path="playground" element={<ProjectGate />} />
+
+  //       {/* <Route path="llm-as-a-judge" element={<JudgePage />} /> */}
+
+  //       {/* <Route path="evaluation" element={<Navigate to="/scores" replace />} />
+  //       <Route path="evaluation/new" element={<Navigate to="/scores/new" replace />} />
+  //       <Route path="evaluation/:id" element={<Navigate to="/scores/:id" replace />} />
+  //       <Route path="evaluation/:id/edit" element={<Navigate to="/scores/:id/edit" replace />} /> */}
+
+  //       {/* <Route path="dashboards" element={<Dashboards />} />
+  //       <Route path="dashboards/new" element={<DashboardNew />} />
+  //       <Route path="dashboards/widgets/new" element={<WidgetNew />} />
+  //       <Route path="dashboards/:dashboardId" element={<DashboardDetail />} /> */}
+
+  //       <Route path="settings" element={<SettingsPage />}>
+  //         <Route index element={<General />} />
+  //         <Route path="llm-connections" element={<LLMConnections />} />
+  //         <Route path="models" element={<Models />} />
+  //         <Route path="scores" element={<Scores />} />
+  //         <Route path="members" element={<Members />} />
+  //       </Route>
+
+  //     </Route>
+  //   </Routes>
+  // );
+
