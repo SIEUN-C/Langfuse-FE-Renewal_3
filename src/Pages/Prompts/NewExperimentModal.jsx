@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import styles from './NewExperimentModal.module.css';
-import { X, ChevronDown, Check, ExternalLink } from 'lucide-react';
+// --- ▼▼▼ [수정] Search 아이콘을 lucide-react에서 가져옵니다. ▼▼▼ ---
+import { X, ChevronDown, Check, ExternalLink, Search } from 'lucide-react';
+// --- ▲▲▲ [수정] 완료 ▲▲▲ ---
 import useProjectId from '../../hooks/useProjectId';
 import { fetchAllPromptNames, fetchVersionsForPrompt, fetchLlmConnections } from './NewExperimentModalApi';
 import Modal from '../../components/Modal/Modal';
@@ -27,34 +29,27 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
   const [isLlmModalOpen, setIsLlmModalOpen] = useState(false);
   const [datasets] = useState(['Select a dataset', 'dataset-1', 'dataset-2']);
   
+  // --- ▼▼▼ Model name 커스텀 드롭다운을 위한 state 및 ref (기존 코드 유지) ▼▼▼ ---
   const [selectedModel, setSelectedModel] = useState('');
   const [isModelDropdownOpen, setModelDropdownOpen] = useState(false);
   const modelRef = useRef(null); 
 
   const { projectId } = useProjectId();
   
-  const DEFAULT_SETTINGS = {
-    useTemperature: true,
-    useTopP: false,
-    useMaxTokens: false,
-    temperature: 0.7,
-    maxTokens: 1024,
-    topP: 1.0,
-    additionalOptions: false,
-  };
+  const DEFAULT_SETTINGS = { temperature: 0.7, maxTokens: 1024, topP: 1.0 };
   const [modelSettings, setModelSettings] = useState(DEFAULT_SETTINGS);
-  
   const [isAdvancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const settingsButtonRef = useRef(null);
 
-  // --- ▼▼▼ [수정] 이 함수의 로직을 변경하여 문제를 해결합니다. ▼▼▼ ---
-  // 기존: handleSettingChange = (key, value) => ...
-  // 변경: handleSettingChange = (newSettingsObject) => ...
-  // 이제 자식 컴포넌트가 전달하는 새로운 설정 객체 전체를 받아 상태를 업데이트합니다.
-  const handleSettingChange = (newSettings) => {
-    setModelSettings(newSettings);
+  // --- ▼▼▼ [추가] 프롬프트 검색 기능과 커스텀 드롭다운을 위한 상태 및 ref를 추가합니다. ▼▼▼ ---
+  const [promptSearchQuery, setPromptSearchQuery] = useState('');
+  const [isPromptDropdownOpen, setPromptDropdownOpen] = useState(false);
+  const promptDropdownRef = useRef(null);
+  // --- ▲▲▲ [추가] 완료 ▲▲▲ ---
+
+  const handleSettingChange = (key, value) => {
+    setModelSettings(prev => ({ ...prev, [key]: value }));
   };
-  // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
 
   const refreshConnections = async () => {
     if (projectId) {
@@ -112,6 +107,11 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // --- ▼▼▼ [수정] 프롬프트 드롭다운 외부 클릭 감지 로직을 추가합니다. ▼▼▼ ---
+      if (promptDropdownRef.current && !promptDropdownRef.current.contains(event.target)) {
+        setPromptDropdownOpen(false);
+      }
+      // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
       if (providerRef.current && !providerRef.current.contains(event.target)) {
         setProviderDropdownOpen(false);
       }
@@ -131,6 +131,17 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
     if (!selectedProviderObject) return [];
     return selectedProviderObject.customModels || [];
   }, [selectedProviderObject]);
+  
+  // --- ▼▼▼ [추가] 검색어에 따라 프롬프트 목록을 필터링하는 로직을 추가합니다. ▼▼▼ ---
+  const filteredPrompts = useMemo(() => {
+    if (!promptSearchQuery) {
+      return allPrompts;
+    }
+    return allPrompts.filter(p =>
+      p.toLowerCase().includes(promptSearchQuery.toLowerCase())
+    );
+  }, [allPrompts, promptSearchQuery]);
+  // --- ▲▲▲ [추가] 완료 ▲▲▲ ---
 
   useEffect(() => {
     if (availableModels.length > 0) {
@@ -156,14 +167,17 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
     });
     onSubmit();
   };
-
-  const handlePromptChange = (e) => {
-    setSelectedPrompt(e.target.value);
-  };
   
   const handleVersionChange = (e) => {
     setSelectedVersion(Number(e.target.value));
   };
+
+  // --- ▼▼▼ [수정] 기존 handlePromptChange 함수를 커스텀 드롭다운에 맞게 수정합니다. ▼▼▼ ---
+  const handlePromptSelect = (promptName) => {
+    setSelectedPrompt(promptName);
+    setPromptDropdownOpen(false); // 항목 선택 시 드롭다운 닫기
+  };
+  // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
 
   return (
     <>
@@ -208,16 +222,45 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Prompt</h3>
               <div className={styles.inlineGroup}>
-                <div className={styles.selectWrapper} style={{ flex: 2 }}>
-                  <select
-                    className={styles.select}
-                    value={selectedPrompt}
-                    onChange={handlePromptChange}
+                {/* --- ▼▼▼ [수정] 기존 select를 커스텀 드롭다운으로 교체합니다. ▼▼▼ --- */}
+                <div className={styles.customSelectContainer} ref={promptDropdownRef} style={{ flex: 2 }}>
+                  <button
+                    className={styles.selectButton}
+                    onClick={() => setPromptDropdownOpen(prev => !prev)}
                   >
-                    {allPrompts.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                  <ChevronDown size={16} className={styles.selectIcon} />
+                    <span>{selectedPrompt || "Select a prompt"}</span>
+                    <ChevronDown size={16} className={styles.selectIcon} />
+                  </button>
+                  {isPromptDropdownOpen && (
+                    <div className={`${styles.dropdownMenu} ${styles.promptDropdownMenu}`}>
+                      <div className={styles.dropdownSearchContainer}>
+                        <Search size={16} />
+                        <input
+                          type="text"
+                          placeholder="Search prompts..."
+                          className={styles.dropdownSearchInput}
+                          value={promptSearchQuery}
+                          onChange={(e) => setPromptSearchQuery(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className={styles.dropdownList}>
+                        {filteredPrompts.map(p => (
+                          <div
+                            key={p}
+                            className={styles.dropdownItem}
+                            onClick={() => handlePromptSelect(p)}
+                          >
+                            {p}
+                            {selectedPrompt === p && <Check size={16} />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+                {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
+
                 <div className={styles.selectWrapper} style={{ flex: 1 }}>
                   <select
                     className={styles.select}
@@ -253,8 +296,7 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
                   settings={modelSettings}
                   onSettingChange={handleSettingChange}
                   onReset={() => setModelSettings(DEFAULT_SETTINGS)}
-                  projectId={projectId}
-                  provider={selectedProviderObject?.provider}
+                  apiKeyDisplayValue={selectedProviderObject?.displaySecretKey}
                 />
               </div>
               
@@ -306,7 +348,7 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
                     onClick={() => setModelDropdownOpen(prev => !prev)}
                     disabled={!selectedProviderObject}
                   >
-                    <span>{selectedModel || (availableModels.length > 0 ? "Select a model" : "No models available")}</span>
+                    <span>{selectedModel || (availableVersions.length > 0 ? "Select a model" : "No models available")}</span>
                     <ChevronDown size={16} className={styles.selectIcon} />
                   </button>
                   
@@ -382,7 +424,7 @@ export default NewExperimentModal;
 
 
 
-//수정 전 코드(playground팀 붙이기 전)
+//playground팀 소스 합체 완료 ver. 아직 프롬프트 검색 기능 없음
 // // src/Pages/Prompts/NewExperimentModal.jsx
 
 // import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -412,21 +454,34 @@ export default NewExperimentModal;
 //   const [isLlmModalOpen, setIsLlmModalOpen] = useState(false);
 //   const [datasets] = useState(['Select a dataset', 'dataset-1', 'dataset-2']);
   
-//   // --- ▼▼▼ Model name 커스텀 드롭다운을 위한 state 및 ref (기존 코드 유지) ▼▼▼ ---
 //   const [selectedModel, setSelectedModel] = useState('');
 //   const [isModelDropdownOpen, setModelDropdownOpen] = useState(false);
 //   const modelRef = useRef(null); 
 
 //   const { projectId } = useProjectId();
   
-//   const DEFAULT_SETTINGS = { temperature: 0.7, maxTokens: 1024, topP: 1.0 };
+//   const DEFAULT_SETTINGS = {
+//     useTemperature: true,
+//     useTopP: false,
+//     useMaxTokens: false,
+//     temperature: 0.7,
+//     maxTokens: 1024,
+//     topP: 1.0,
+//     additionalOptions: false,
+//   };
 //   const [modelSettings, setModelSettings] = useState(DEFAULT_SETTINGS);
+  
 //   const [isAdvancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
 //   const settingsButtonRef = useRef(null);
 
-//   const handleSettingChange = (key, value) => {
-//     setModelSettings(prev => ({ ...prev, [key]: value }));
+//   // --- ▼▼▼ [수정] 이 함수의 로직을 변경하여 문제를 해결합니다. ▼▼▼ ---
+//   // 기존: handleSettingChange = (key, value) => ...
+//   // 변경: handleSettingChange = (newSettingsObject) => ...
+//   // 이제 자식 컴포넌트가 전달하는 새로운 설정 객체 전체를 받아 상태를 업데이트합니다.
+//   const handleSettingChange = (newSettings) => {
+//     setModelSettings(newSettings);
 //   };
+//   // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
 
 //   const refreshConnections = async () => {
 //     if (projectId) {
@@ -487,7 +542,6 @@ export default NewExperimentModal;
 //       if (providerRef.current && !providerRef.current.contains(event.target)) {
 //         setProviderDropdownOpen(false);
 //       }
-//       // --- ▼▼▼ Model name 드롭다운 외부 클릭 감지 (기존 코드 유지) ▼▼▼ ---
 //       if (modelRef.current && !modelRef.current.contains(event.target)) {
 //         setModelDropdownOpen(false);
 //       }
@@ -513,7 +567,7 @@ export default NewExperimentModal;
 //     } else {
 //       setSelectedModel('');
 //     }
-//   }, [selectedProviderObject, availableModels]);
+//   }, [selectedProviderObject, availableModels, selectedModel]);
 
 //   if (!isOpen) return null;
 
@@ -626,7 +680,8 @@ export default NewExperimentModal;
 //                   settings={modelSettings}
 //                   onSettingChange={handleSettingChange}
 //                   onReset={() => setModelSettings(DEFAULT_SETTINGS)}
-//                   apiKeyDisplayValue={selectedProviderObject?.displaySecretKey}
+//                   projectId={projectId}
+//                   provider={selectedProviderObject?.provider}
 //                 />
 //               </div>
               
@@ -670,7 +725,6 @@ export default NewExperimentModal;
 //                 </div>
 //               </div>
               
-//               {/* --- ▼▼▼ 수정된 부분 시작: Model name 커스텀 드롭다운 복원 ▼▼▼ --- */}
 //               <div className={styles.formRow}>
 //                 <label>Model name</label>
 //                 <div className={styles.customSelectContainer} ref={modelRef}>
@@ -698,7 +752,6 @@ export default NewExperimentModal;
 //                           {selectedModel === modelName && <Check size={16} />}
 //                         </div>
 //                       ))}
-//                       {/* "+ Add LLM Connection" 버튼을 다시 추가합니다. */}
 //                       <div className={styles.dropdownDivider}></div>
 //                       <div
 //                         className={`${styles.dropdownItem} ${styles.actionItem}`}
@@ -713,7 +766,6 @@ export default NewExperimentModal;
 //                   )}
 //                 </div>
 //               </div>
-//               {/* --- ▲▲▲ 수정된 부분 끝 ▲▲▲ --- */}
 //             </div>
 
 //             <div className={styles.section}>

@@ -330,3 +330,45 @@
   color: #007bff; /* 원하는 색상으로 변경 가능 */
   cursor: pointer;
 }
+
+/* src/Pages/Prompts/NewExperimentModal.module.css 파일 맨 아래에 이 내용을 추가해주세요. */
+
+/* --- ▼▼▼ [추가] 프롬프트 검색 드롭다운을 위한 스타일 ▼▼▼ --- */
+
+/* 드롭다운 메뉴의 최소 너비를 설정하여 너무 작아지는 것을 방지합니다. */
+.promptDropdownMenu {
+  min-width: 250px; 
+}
+
+/* 드롭다운 메뉴 내의 검색창 컨테이너 스타일 */
+.dropdownSearchContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #475569; /* 검색창과 목록 구분선 */
+}
+
+/* 검색창 아이콘 색상 */
+.dropdownSearchContainer svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* 검색창 input 스타일 */
+.dropdownSearchInput {
+  width: 100%;
+  background: none;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 14px;
+}
+
+/* 검색 결과 목록을 담는 컨테이너 (스크롤 가능) */
+.dropdownList {
+  max-height: 200px; /* 목록이 길어지면 스크롤이 생기도록 최대 높이 제한 */
+  overflow-y: auto;
+  padding: 4px; /* 목록 아이템과 메뉴 경계 사이의 여백 */
+}
+/* --- ▲▲▲ [추가] 완료 ▲▲▲ --- */
