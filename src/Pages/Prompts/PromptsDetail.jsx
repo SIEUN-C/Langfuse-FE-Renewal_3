@@ -29,6 +29,11 @@ import { fetchPromptVersions } from './PromptsDetailApi.js';
 // --- ▼▼▼ [추가]  프롬프트 이동 화살표 구현 + 버전 삭제 ▼▼▼ ---
 import { deletePromptVersion, fetchPrompts } from './promptsApi.js';
 // --- ▲▲▲ [추가]  프롬프트 이동 화살표 구현 + 버전 삭제 ▲▲▲ ---
+// --- ▼▼▼ [추가] Comments ▼▼▼ ---
+import SidePanel from '../../components/SidePanel/SidePanel.jsx';
+import Comments from '../../components/Comments/Comments.jsx';
+import { useComments } from '../../hooks/useComments.js';
+// --- ▲▲▲ [추가] Comments ▲▲▲ ---
 import NewExperimentModal from './NewExperimentModal';
 
 // --- ▼▼▼ [추가] Reference 멘션 기능 구현 ▼▼▼ ---
@@ -106,6 +111,17 @@ export default function PromptsDetail() {
   const [isVersionMenuOpen, setVersionMenuOpen] = useState(false);
   const versionMenuRef = useRef(null);
   // --- ▲▲▲ [추가] 버전 삭제 ▲▲▲ ---
+  // --- ▼▼▼ [추가] Comments ▼▼▼ ---
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+
+  const {
+    comments,
+    isLoading: isCommentsLoading,
+    error: commentsError,
+    addComment,
+    removeComment,
+  } = useComments(projectId, 'PROMPT', selectedVersion?.dbId);
+  // --- ▲▲▲ [추가] Comments ▲▲▲ ---
 
   // 2. Memoized Values
   const filteredVersions = useMemo(() => {
@@ -445,7 +461,11 @@ export default function PromptsDetail() {
               >
                 Dataset run
               </button>
-              <button className={styles.iconButton}><MessageCircle size={16} /></button>
+              {/* --- ▼▼▼ [수정] comments ▼▼▼ --- */}
+              <button className={styles.iconButton} onClick={() => setIsCommentsOpen(true)}>
+                <MessageCircle size={16} />
+              </button>
+              {/* --- ▲▲▲ [수정] comments ▲▲▲ --- */}
               {/* --- ▼▼▼ [수정] 버전 삭제 ▼▼▼ --- */}
               <div className={styles.versionMenuContainer} ref={versionMenuRef}>
                 <button
@@ -537,6 +557,22 @@ export default function PromptsDetail() {
           promptVersion={selectedVersion?.id}
         />
       )}
+
+      {/* --- ▼▼▼ [추가] Comments ▼▼▼ --- */}
+      <SidePanel
+        title="Comments"
+        isOpen={isCommentsOpen}
+        onClose={() => setIsCommentsOpen(false)}
+      >
+        <Comments
+          comments={comments}
+          isLoading={isCommentsLoading}
+          error={commentsError}
+          onAddComment={addComment}
+          onDeleteComment={removeComment}
+        />
+      </SidePanel>
+      {/* --- ▲▲▲ [추가] Comments ▲▲▲ --- */}
     </div>
   );
 }
