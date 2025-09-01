@@ -4,7 +4,7 @@ import styles from './PromptsNew.module.css';
 import { Book } from 'lucide-react';
 import PromptsReference from './PromptsReference.jsx';
 import ChatBox from '../../components/ChatBox/ChatBox.jsx';
-// import LineNumberedTextarea from '../../components/LineNumberedTextarea/LineNumberedTextarea.jsx'; // --- 1. [수정] 기존 LineNumberedTextarea import 제거 ---
+import LineNumberedTextarea from '../../components/LineNumberedTextarea/LineNumberedTextarea.jsx'; // --- 1. [수정] 기존 LineNumberedTextarea import 제거 ---
 import CodeBlock from '../../components/CodeBlock/CodeBlock.jsx'; // --- 2. [수정] CodeBlock 컴포넌트 import 추가 ---
 import FormPageLayout from '../../components/Layouts/FormPageLayout.jsx';
 import FormGroup from '../../components/Form/FormGroup.jsx';

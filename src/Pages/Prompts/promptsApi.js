@@ -168,8 +168,15 @@ const deletePromptVersion = async (promptVersionId, projectId) => {
     });
   } catch (error) {
     console.error(`Failed to delete prompt version ${promptVersionId}:`, error);
-    const errorMessage = error.response?.data?.error?.message || `Failed to delete prompt version.`;
+
+    // --- ▼▼▼ 수정 : reference 참조한 파일 삭제시 문구 변경 ▼▼▼ ---
+    // 백엔드가 'message' 필드에 모든 정보를 담아주므로, 해당 메시지를 그대로 사용합니다.
+    const errorMessage =
+      error.response?.data?.error?.json?.message ||
+      'Failed to delete prompt version.';
+
     throw new Error(errorMessage);
+    // --- ▲▲▲ 수정 : reference 참조한 파일 삭제시 문구 변경 ▲▲▲ ---
   }
 };
 

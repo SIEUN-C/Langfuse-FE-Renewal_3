@@ -17,15 +17,67 @@ import {
   ChevronRight,
   MessageCircle,
   Tag,
+  FileText,   // 추가 : reference 멘션기능 구현
 } from 'lucide-react';
 import DuplicatePromptModal from './DuplicatePromptModal.jsx';
 import { duplicatePrompt } from './DuplicatePromptModalApi.js';
 import { fetchPromptVersions } from './PromptsDetailApi.js';
 import NewExperimentModal from './NewExperimentModal'; // NewExperimentModal import
 
+// --- ▼▼▼ 추가 : reference 멘션기능 구현 ▼▼▼ ---
+// 이 컴포넌트는 텍스트를 분석하여 참조 태그를 클릭 가능한 멘션으로 렌더링합니다.
+const PromptContentViewer = ({ content }) => {
+  const navigate = useNavigate();
+  const handleMentionClick = (promptName) => {
+    navigate(`/prompts/${promptName}`);
+  };
+
+  const parsedContent = useMemo(() => {
+    if (!content) return [];
+
+    // 정규식을 수정하여 'version' 또는 'label'을 키로 인식하도록 변경
+    const regex = /@@@langfusePrompt:name=([^|]+)\|(version|label)=([^@]+)@@@/g;
+    const parts = content.split(regex);
+    const elements = [];
+
+    // 루프 구조를 수정하여 [텍스트, name, key, value] 그룹을 처리
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 4 === 0) {
+        if (parts[i]) {
+          elements.push(<span key={`text-${i}`}>{parts[i]}</span>);
+        }
+      } else if (i % 4 === 1) {
+        const name = parts[i];
+        const key = parts[i + 1]; // 'version' 또는 'label'
+        const value = parts[i + 2];
+
+        // key 값에 따라 배지 텍스트를 다르게 표시
+        const badgeText = key === 'version' ? `v${value}` : value;
+
+        elements.push(
+          <span
+            key={`mention-${i}`}
+            className={styles.promptReference}
+            onClick={() => handleMentionClick(name)}
+            title={`Go to prompt: ${name}`}
+          >
+            <FileText size={14} />
+            {name}
+            <span className={styles.versionBadge}>{badgeText}</span>
+          </span>
+        );
+      }
+    }
+    return elements;
+  }, [content, navigate]);
+
+  return <pre>{parsedContent}</pre>;
+};
+// --- ▲▲▲ 추가 : reference 멘션기능 구현 ▲▲▲ ---
+
 /**
  * [tRPC] 프롬프트 목록 전체를 가져옵니다.
- * @param {string} projectId - 프로젝트 ID를 인자로 받습니다.
+ * @paramㅎ {string} projectId - 프로젝트 ID를 인자로 받습니다.
  */
 // --- 메인 컴포넌트 ---
 export default function PromptsDetail() {
@@ -348,12 +400,20 @@ export default function PromptsDetail() {
                 {selectedVersion.prompt.system && (
                   <div className={styles.promptCard}>
                     <div className={styles.promptHeader}>System Prompt</div>
-                    <div className={styles.promptBody}><pre>{selectedVersion.prompt.system}</pre></div>
+                    {/* --- ▼▼▼ [수정] pre 태그를 새로 만든 컴포넌트로 교체 ▼▼▼ --- */}
+                    <div className={styles.promptBody}>
+                      <PromptContentViewer content={selectedVersion.prompt.system} />
+                    </div>
+                    {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
                   </div>
                 )}
                 <div className={styles.promptCard}>
                   <div className={styles.promptHeader}>Text Prompt</div>
-                  <div className={styles.promptBody}><pre>{selectedVersion.prompt.user}</pre></div>
+                  {/* --- ▼▼▼ [수정] pre 태그를 새로 만든 컴포넌트로 교체 ▼▼▼ --- */}
+                  <div className={styles.promptBody}>
+                    <PromptContentViewer content={selectedVersion.prompt.user} />
+                  </div>
+                  {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
                 </div>
                 {variables.length > 0 && (
                   <div className={styles.variablesInfo}>
