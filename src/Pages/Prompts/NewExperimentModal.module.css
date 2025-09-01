@@ -372,3 +372,57 @@
   padding: 4px; /* 목록 아이템과 메뉴 경계 사이의 여백 */
 }
 /* --- ▲▲▲ [추가] 완료 ▲▲▲ --- */
+
+/* src/Pages/Prompts/NewExperimentModal.module.css 파일 맨 아래에 추가 */
+
+/* --- ▼▼▼ [추가] Dataset 유효성 검사를 위한 스타일 ▼▼▼ --- */
+
+/* 유효성 검사 실패 시 select 요소에 적용될 스타일 */
+.select.error {
+  border-color: #ef4444; /* 빨간색 계열 테두리 */
+}
+.select.error:focus {
+  border-color: #ef4444; /* 포커스 시에도 테두리 색 유지 */
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); /* 포커스 시 그림자 효과 */
+}
+
+/* "Please select a dataset" 에러 메시지에 적용될 스타일 */
+.errorMessage {
+  color: #f87171; /* 밝은 빨간색 계열 텍스트 */
+  font-size: 13px;
+  margin-top: 6px; /* select 요소와의 간격 */
+}
+/* --- ▲▲▲ [추가] 완료 ▲▲▲ --- */
+
+/* src/Pages/Prompts/NewExperimentModal.module.css 파일 맨 아래에 추가 */
+
+/* --- ▼▼▼ [추가] 데이터셋이 없을 때 보여줄 경고 메시지 스타일 ▼▼▼ --- */
+.warningMessage {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.1); /* 옅은 빨간색 배경 */
+  border: 1px solid #ef4444; /* 빨간색 테두리 */
+  border-radius: 6px;
+  color: #f87171; /* 밝은 빨간색 텍스트 */
+  font-size: 14px;
+  text-align: center;
+}
+
+.warningMessage p {
+  margin: 0;
+}
+/* --- ▲▲▲ [추가] 완료 ▲▲▲ --- */
+
+
+/* --- ▼▼▼ [수정] createButton에 disabled 상태 스타일 추가 ▼▼▼ --- */
+/* 기존 .createButton 바로 아래에 추가하면 좋습니다. */
+.createButton:disabled {
+  background-color: #475569;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.createButton:disabled:hover {
+  background-color: #475569;
+}
+/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */
