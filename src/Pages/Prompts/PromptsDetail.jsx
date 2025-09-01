@@ -1,5 +1,5 @@
 // PromptsDetail.jsx
-//수정 코드
+// 수정 코드
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import styles from './PromptsDetail.module.css';
@@ -13,18 +13,25 @@ import {
   Search,
   Plus,
   GitCommitHorizontal,
-  ChevronLeft,
-  ChevronRight,
+  // --- ▼▼▼ [수정] 프롬프트 이동 화살표 구현 ▼▼▼ ---
+  ChevronUp,
+  ChevronDown,
+  // --- ▲▲▲ [수정] 프롬프트 이동 화살표 구현 ▲▲▲ ---
   MessageCircle,
   Tag,
-  FileText,   // 추가 : reference 멘션기능 구현
+  // --- ▼▼▼ [추가] Reference 멘션 기능 구현 ▼▼▼ ---
+  FileText,
+  // --- ▲▲▲ [추가] Reference 멘션 기능 구현 ▲▲▲ ---
 } from 'lucide-react';
 import DuplicatePromptModal from './DuplicatePromptModal.jsx';
 import { duplicatePrompt } from './DuplicatePromptModalApi.js';
 import { fetchPromptVersions } from './PromptsDetailApi.js';
-import NewExperimentModal from './NewExperimentModal'; // NewExperimentModal import
+// --- ▼▼▼ [추가]  프롬프트 이동 화살표 구현 ▼▼▼ ---
+import { fetchPrompts } from './promptsApi.js';
+// --- ▲▲▲ [추가]  프롬프트 이동 화살표 구현 ▲▲▲ ---
+import NewExperimentModal from './NewExperimentModal';
 
-// --- ▼▼▼ 추가 : reference 멘션기능 구현 ▼▼▼ ---
+// --- ▼▼▼ [추가] Reference 멘션 기능 구현 ▼▼▼ ---
 // 이 컴포넌트는 텍스트를 분석하여 참조 태그를 클릭 가능한 멘션으로 렌더링합니다.
 const PromptContentViewer = ({ content }) => {
   const navigate = useNavigate();
@@ -73,57 +80,70 @@ const PromptContentViewer = ({ content }) => {
 
   return <pre>{parsedContent}</pre>;
 };
-// --- ▲▲▲ 추가 : reference 멘션기능 구현 ▲▲▲ ---
+// --- ▲▲▲ [추가] Reference 멘션 기능 구현 ▲▲▲ ---
 
-/**
- * [tRPC] 프롬프트 목록 전체를 가져옵니다.
- * @paramㅎ {string} projectId - 프로젝트 ID를 인자로 받습니다.
- */
 // --- 메인 컴포넌트 ---
 export default function PromptsDetail() {
+  // 1. Hooks and State Initialization
   const { id } = useParams();
   const navigate = useNavigate();
   const { projectId } = useProjectId();
+  const playgroundMenuRef = useRef(null);
 
   const [versions, setVersions] = useState([]);
   const [selectedVersion, setSelectedVersion] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeDetailTab, setActiveDetailTab] = useState('Prompt');
-  const [allPromptNames, setAllPromptNames] = useState([]);
+  // --- ▼▼▼ [수정] 프롬프트 이동 화살표 구현 ▼▼▼ ---
+  const [allPrompts, setAllPrompts] = useState([]);
+  // --- ▲▲▲ [추가] 프롬프트 이동 화살표 구현 ▲▲▲ ---
   const [isDuplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [isPlaygroundMenuOpen, setPlaygroundMenuOpen] = useState(false);
-  const playgroundMenuRef = useRef(null);
-
   const [searchQuery, setSearchQuery] = useState('');
-  // Experiment 모달의 열림/닫힘 상태를 관리
   const [isExperimentModalOpen, setExperimentModalOpen] = useState(false);
 
+  // 2. Memoized Values
   const filteredVersions = useMemo(() => {
     const searchId = parseInt(searchQuery);
-
     if (searchQuery && !isNaN(searchId)) {
       return versions.filter(version => version.id === searchId);
     }
-
-    if (!searchQuery) {
-      return versions;
-    }
-
+    if (!searchQuery) return versions;
     const query = searchQuery.toLowerCase();
-    // 아래 switch 문을 제거하고 이 로직만 남겨야 합니다.
-    return versions.filter(version => {
-      return (
-        version.labels.some(label => label.toLowerCase().includes(query)) ||
-        version.tags.some(tag => tag.toLowerCase().includes(query)) ||
-        version.details.toLowerCase().includes(query) ||
-        version.author.toLowerCase().includes(query)
-      );
-    });
+    return versions.filter(version =>
+      version.labels.some(label => label.toLowerCase().includes(query)) ||
+      version.tags.some(tag => tag.toLowerCase().includes(query)) ||
+      version.details.toLowerCase().includes(query) ||
+      version.author.toLowerCase().includes(query)
+    );
   }, [versions, searchQuery]);
 
+  // --- ▼▼▼ [추가] 프롬프트 이동 화살표 구현 ▼▼▼ ---
+  const { currentIndex, prevPromptName, nextPromptName } = useMemo(() => {
+    if (!id || allPrompts.length === 0) {
+      return { currentIndex: -1, prevPromptName: null, nextPromptName: null };
+    }
+    const idx = allPrompts.findIndex(name => name === id);
+    return {
+      currentIndex: idx,
+      prevPromptName: idx > 0 ? allPrompts[idx - 1] : null,
+      nextPromptName: idx < allPrompts.length - 1 ? allPrompts[idx + 1] : null,
+    };
+  }, [id, allPrompts]);
+  // --- ▲▲▲ [추가] 프롬프트 이동 화살표 구현 ▲▲▲ ---
 
+  const variables = useMemo(() => {
+    if (!selectedVersion) return [];
+    const content = selectedVersion.prompt;
+    const textToScan = `${content.system || ''} ${content.user || ''}`;
+    const regex = /{{\s*([\w\d_]+)\s*}}/g;
+    const matches = textToScan.match(regex) || [];
+    const uniqueVars = new Set(matches.map(v => v.replace(/[{}]/g, '').trim()));
+    return Array.from(uniqueVars);
+  }, [selectedVersion]);
 
+  // 3. Data Fetching and Side Effects
   const loadPromptData = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
@@ -146,6 +166,22 @@ export default function PromptsDetail() {
     loadPromptData();
   }, [loadPromptData]);
 
+  // --- ▼▼▼ [추가] 프롬프트 이동 화살표 구현 ▼▼▼ ---
+  useEffect(() => {
+    if (projectId) {
+      const loadAllPrompts = async () => {
+        try {
+          const prompts = await fetchPrompts(projectId);
+          setAllPrompts(prompts.map(p => p.name)); // 이름 배열만 저장
+        } catch (error) {
+          console.error("Failed to load all prompt names:", error);
+        }
+      };
+      loadAllPrompts();
+    }
+  }, [projectId]);
+  // --- ▲▲▲ [추가] 프롬프트 이동 화살표 구현 ▲▲▲ ---
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (playgroundMenuRef.current && !playgroundMenuRef.current.contains(event.target)) {
@@ -158,20 +194,24 @@ export default function PromptsDetail() {
     };
   }, []);
 
+  // 4. Event Handlers
+  // --- ▼▼▼ [추가] 프롬프트 이동 화살표 구현 ▼▼▼ ---
+  const handleNavigate = (promptName) => {
+    if (promptName) {
+      navigate(`/prompts/${promptName}`);
+    }
+  };
+  // --- ▲▲▲ [추가] 프롬프트 이동 화살표 구현 ▲▲▲ ---
+
   const handleNewVersion = () => {
     if (!id || !selectedVersion) return;
-
     navigate(`/prompts/new`, {
       state: {
-        // 이제 상단에서 선언한 projectId 변수를 여기서 정상적으로 사용할 수 있습니다.
-        projectId: projectId, // <-- 2. 'projectid'를 'projectId' (camelCase)로 수정
+        projectId: projectId,
         promptName: id,
         promptType: selectedVersion.prompt.system ? 'Chat' : 'Text',
         chatContent: selectedVersion.prompt.system
-          ? [
-            { id: 1, role: 'System', content: selectedVersion.prompt.system },
-            { id: 2, role: 'User', content: selectedVersion.prompt.user },
-          ]
+          ? [{ id: 1, role: 'System', content: selectedVersion.prompt.system }, { id: 2, role: 'User', content: selectedVersion.prompt.user }]
           : [{ id: 1, role: 'System', content: 'You are a helpful assistant.' }],
         textContent: selectedVersion.prompt.system ? '' : selectedVersion.prompt.user,
         config: JSON.stringify(selectedVersion.config, null, 2),
@@ -181,10 +221,8 @@ export default function PromptsDetail() {
     });
   };
 
-
   const handleGoToPlayground = () => {
     if (!selectedVersion) return;
-
     const messages = [];
     if (selectedVersion.prompt.system) {
       messages.push({ id: Date.now() + 1, role: 'System', content: selectedVersion.prompt.system });
@@ -192,7 +230,6 @@ export default function PromptsDetail() {
     if (selectedVersion.prompt.user) {
       messages.push({ id: Date.now() + 2, role: 'User', content: selectedVersion.prompt.user });
     }
-
     navigate('/playground', {
       state: {
         promptName: id,
@@ -203,47 +240,13 @@ export default function PromptsDetail() {
     });
   };
 
-  const { currentPromptIndex, handlePrev, handleNext } = useMemo(() => {
-    const currentIndex = id ? allPromptNames.findIndex(name => name === id) : -1;
-
-    const prev = () => {
-      if (currentIndex > 0) {
-        navigate(`/prompts/${allPromptNames[currentIndex - 1]}`);
-      }
-    };
-
-    const next = () => {
-      if (currentIndex !== -1 && currentIndex < allPromptNames.length - 1) {
-        navigate(`/prompts/${allPromptNames[currentIndex + 1]}`);
-      }
-    };
-
-    return { currentPromptIndex: currentIndex, handlePrev: prev, handleNext: next };
-  }, [id, allPromptNames, navigate]);
-
-  const variables = useMemo(() => {
-    if (!selectedVersion) return [];
-    const content = selectedVersion.prompt;
-    const textToScan = `${content.system || ''} ${content.user || ''}`;
-    const regex = /{{\s*([\w\d_]+)\s*}}/g;
-    const matches = textToScan.match(regex) || [];
-    const uniqueVars = new Set(matches.map(v => v.replace(/[{}]/g, '').trim()));
-    return Array.from(uniqueVars);
-  }, [selectedVersion]);
-
   const handleDuplicateSubmit = async (newName, copyAll) => {
     if (!selectedVersion?.promptId) {
       alert("복사할 버전의 ID를 찾을 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.");
       return;
     }
-
     try {
-      const newPrompt = await duplicatePrompt(
-        selectedVersion.promptId, // 고유 DB ID 전달
-        newName,
-        copyAll,
-        projectId
-      );
+      const newPrompt = await duplicatePrompt(selectedVersion.promptId, newName, copyAll, projectId);
       alert(`프롬프트가 "${newName}"으로 복제되었습니다.`);
       setDuplicateModalOpen(false);
       if (newPrompt && newPrompt.name) {
@@ -255,13 +258,13 @@ export default function PromptsDetail() {
     }
   };
 
-  // Experiment 모달에서 'Create' 버튼을 눌렀을 때 실행될 함수
   const handleRunExperiment = () => {
     console.log("Create Experiment button clicked. Form data is in the modal.");
     alert('실험 생성 요청이 콘솔에 기록되었습니다.');
     setExperimentModalOpen(false);
   };
 
+  // 5. Conditional Renders for Loading/Error States
   if (isLoading) {
     return <div className={styles.container}><div className={styles.placeholder}>프롬프트를 불러오는 중...</div></div>;
   }
@@ -282,13 +285,12 @@ export default function PromptsDetail() {
     );
   }
 
+  // 6. Main Render
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.breadcrumbs}>
-          <h1 className={styles.promptNameH1}>
-            {id}
-          </h1>
+          <h1 className={styles.promptNameH1}>{id}</h1>
           <div className={styles.versionDropdown}>
             {selectedVersion.tags.map(tag => (
               <span key={tag} className={styles.tagItem}><Tag size={12} /> {tag}</span>
@@ -299,20 +301,33 @@ export default function PromptsDetail() {
           <button className={styles.actionButton} onClick={() => setDuplicateModalOpen(true)}>
             <Clipboard size={14} /> Duplicate
           </button>
+          {/* --- ▼▼▼ [수정] 프롬프트 이동 화살표 구현 ▼▼▼ --- */}
           <div className={styles.navButtons}>
-            <button className={styles.navButton} onClick={handlePrev} disabled={currentPromptIndex <= 0}>
-              <ChevronLeft size={16} />
+            <button
+              className={styles.navButton}
+              onClick={() => handleNavigate(prevPromptName)}
+              disabled={!prevPromptName}
+              title={prevPromptName ? `Go to ${prevPromptName}` : "First prompt"}
+            >
+              <ChevronUp size={16} />
             </button>
-            <button className={styles.navButton} onClick={handleNext} disabled={currentPromptIndex === -1 || currentPromptIndex >= allPromptNames.length - 1}>
-              <ChevronRight size={16} />
+            <button
+              className={styles.navButton}
+              onClick={() => handleNavigate(nextPromptName)}
+              disabled={!nextPromptName}
+              title={nextPromptName ? `Go to ${nextPromptName}` : "Last prompt"}
+            >
+              <ChevronDown size={16} />
             </button>
           </div>
+          {/* --- ▲▲▲ [수정] 프롬프트 이동 화살표 구현 ▲▲▲ --- */}
         </div>
       </div>
 
       <div className={styles.tabs}>
         <button className={`${styles.tabButton} ${styles.active}`}>Versions</button>
       </div>
+
       <div className={styles.mainGrid}>
         <div className={styles.leftPanel}>
           <div className={styles.versionToolbar}>
@@ -371,7 +386,6 @@ export default function PromptsDetail() {
                 >
                   <Play size={14} /> Playground
                 </button>
-
                 {isPlaygroundMenuOpen && (
                   <div className={styles.playgroundDropdownMenu}>
                     <div className={styles.playgroundDropdownItem} onClick={handleGoToPlayground}>
@@ -393,27 +407,26 @@ export default function PromptsDetail() {
               <button className={styles.iconButton}><MoreVertical size={18} /></button>
             </div>
           </div>
-
           <div className={styles.promptArea}>
             {activeDetailTab === 'Prompt' && (
               <>
                 {selectedVersion.prompt.system && (
                   <div className={styles.promptCard}>
                     <div className={styles.promptHeader}>System Prompt</div>
-                    {/* --- ▼▼▼ [수정] pre 태그를 새로 만든 컴포넌트로 교체 ▼▼▼ --- */}
+                    {/* --- ▼▼▼ [수정] Reference 멘션 기능 구현 ▼▼▼ --- */}
                     <div className={styles.promptBody}>
                       <PromptContentViewer content={selectedVersion.prompt.system} />
                     </div>
-                    {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
+                    {/* --- ▲▲▲ [수정] Reference 멘션 기능 구현 ▲▲▲ --- */}
                   </div>
                 )}
                 <div className={styles.promptCard}>
                   <div className={styles.promptHeader}>Text Prompt</div>
-                  {/* --- ▼▼▼ [수정] pre 태그를 새로 만든 컴포넌트로 교체 ▼▼▼ --- */}
+                  {/* --- ▼▼▼ [수정] Reference 멘션 기능 구현 ▼▼▼ --- */}
                   <div className={styles.promptBody}>
                     <PromptContentViewer content={selectedVersion.prompt.user} />
                   </div>
-                  {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
+                  {/* --- ▲▲▲ [수정] Reference 멘션 기능 구현 ▲▲▲ --- */}
                 </div>
                 {variables.length > 0 && (
                   <div className={styles.variablesInfo}>
@@ -425,14 +438,12 @@ export default function PromptsDetail() {
                 )}
               </>
             )}
-
             {activeDetailTab === 'Config' && (
               <div className={styles.promptCard}>
                 <div className={styles.promptHeader}>Config</div>
                 <div className={styles.promptBody}><pre>{JSON.stringify(selectedVersion.config ?? {}, null, 2)}</pre></div>
               </div>
             )}
-
             {activeDetailTab === 'Use' && (
               <>
                 <div className={styles.promptCard}>
@@ -445,11 +456,11 @@ export default function PromptsDetail() {
                 </div>
               </>
             )}
-
             {activeDetailTab === 'Generations' && <div className={styles.placeholder}>No generations linked yet.</div>}
           </div>
         </div>
       </div>
+
       {isDuplicateModalOpen && (
         <DuplicatePromptModal
           isOpen={isDuplicateModalOpen}
@@ -471,4 +482,3 @@ export default function PromptsDetail() {
     </div>
   );
 }
-

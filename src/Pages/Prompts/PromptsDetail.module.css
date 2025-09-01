@@ -76,16 +76,24 @@
   cursor: not-allowed;
 }
 
+/* --- ▼▼▼ [수정] 프롬프트간 이동 버튼 ▼▼▼ --- */
 .navButton:first-child {
-  border-right: none;
-  border-top-right-radius: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
 
 .navButton:last-child {
   border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
+
+/* --- ▲▲▲ [수정] 프롬프트간 이동 버튼 ▲▲▲ --- */
 
 /* 2. 탭 */
 .tabs {
@@ -473,7 +481,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: #f1f5f91a; /* 살짝 투명한 흰색 배경 */
+  background-color: #f1f5f91a;
+  /* 살짝 투명한 흰색 배경 */
   border: 1px solid #334155;
   border-radius: 6px;
   padding: 2px 8px;
@@ -481,11 +490,13 @@
   color: #cbd5e1;
   cursor: pointer;
   transition: background-color 0.2s;
-  vertical-align: middle; /* 주변 텍스트와 세로 정렬 */
+  vertical-align: middle;
+  /* 주변 텍스트와 세로 정렬 */
 }
 
 .promptReference:hover {
-  background-color: #f1f5f933; /* 호버 시 배경을 조금 더 진하게 */
+  background-color: #f1f5f933;
+  /* 호버 시 배경을 조금 더 진하게 */
   border-color: #4b5563;
 }
 
