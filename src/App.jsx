@@ -70,7 +70,7 @@ export default function App() {
     <Routes>
       {/* 로그인 */}
       <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
-      <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
+      <Route path="/" element={session ? <Layout session={session}/> : <Navigate to="/login" />}>
 
         {/* 홈 -> /trace 경로로 리디렉션 */}
         <Route index element={<Navigate to="/trace" replace />} />
@@ -107,6 +107,7 @@ export default function App() {
 
         <Route path="settings" element={<SettingsPage />}>
           <Route index element={<General />} />
+          <Route path="api-keys" element={<ApiKeys />} /> {/* 이 라인이 빠져있어서 추가했습니다. */}
           <Route path="llm-connections" element={<LLMConnections />} />
           <Route path="models" element={<Models />} />
           <Route path="scores" element={<Scores />} />
