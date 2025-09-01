@@ -16,8 +16,10 @@ import { createTrace, updateTrace } from './CreateTrace.jsx';
 import { langfuse } from '../../lib/langfuse';
 import { fetchTraces, deleteTrace } from './TracingApi';
 import { fetchTraceDetails } from './TraceDetailApi';
-import { COLUMN_OPTIONS } from 'components/FilterControls/FilterBuilder';
 import { getProjects } from '../../api/Settings/ProjectApi';
+// --- ▼▼▼ [추가] filter ▼▼▼ ---
+import { tracingFilterConfig } from 'components/FilterControls/filterConfig';
+// --- ▲▲▲ [추가] filter ▲▲▲ ---
 
 // [추가됨] Timestamp 컬럼에 대한 렌더링 함수를 추가하여 날짜 형식을 지정합니다.
 // 이렇게 하면 데이터는 표준 형식으로 다루고, 보여줄 때만 보기 좋게 바꿀 수 있습니다.
@@ -58,8 +60,8 @@ const Tracing = () => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [pendingTraceId, setPendingTraceId] = useState(null);
   const [builderFilters, setBuilderFilters] = useState(() => {
-      const initialColumn = COLUMN_OPTIONS[0];
-      return [{ id: 1, column: initialColumn, operator: '=', value: '', metaKey: '' }];
+      const initialColumn = tracingFilterConfig[0];
+      return [{ id: 1, column: initialColumn.key, operator: initialColumn.operators[0], value: '', metaKey: '' }];
   });
 
   const [projectId, setProjectId] = useState(null);
@@ -93,6 +95,7 @@ const Tracing = () => {
   const builderFilterProps = {
     filters: builderFilters,
     onFilterChange: setBuilderFilters,
+    filterConfig: tracingFilterConfig
   };
 
   const columnMapping = {

@@ -9,7 +9,7 @@ import FilterButton from '../../../components/FilterButton/FilterButton.jsx';
 import FilterControls from '../../../components/FilterControls/FilterControls';
 import DateRangePicker from 'components/DateRange/DateRangePicker.jsx';
 import { fetchSessions } from './SessionApi.js';
-import { COLUMN_OPTIONS } from 'components/FilterControls/FilterBuilder'; // COLUMN_OPTIONS import 추가
+import { sessionsFilterConfig } from '../../../components/FilterControls/filterConfig'; // [수정] sessionsFilterConfig를 import 합니다.
 
 const Sessions = () => {
     const [sessions, setSessions] = useState([]);
@@ -25,10 +25,10 @@ const Sessions = () => {
     const [favoriteState, setFavoriteState] = useState({});
     const [selectedRows, setSelectedRows] = useState(new Set());
 
-    // FilterBuilder 상태 추가
+    // [수정] FilterBuilder 상태를 sessionsFilterConfig 기준으로 초기화합니다.
     const [builderFilters, setBuilderFilters] = useState(() => {
-        const initialColumn = COLUMN_OPTIONS[0];
-        return [{ id: 1, column: initialColumn, operator: '=', value: '', metaKey: '' }];
+        const initialColumn = sessionsFilterConfig[0];
+        return [{ id: 1, column: initialColumn.key, operator: initialColumn.operators[0], value: '', metaKey: '' }];
     });
 
     const loadSessions = async () => {
@@ -51,10 +51,11 @@ const Sessions = () => {
 
     useEffect(() => { loadSessions(); }, []);
 
-    // builderFilterProps 객체 생성
+    // [수정] builderFilterProps 객체에 sessionsFilterConfig를 전달합니다.
     const builderFilterProps = {
         filters: builderFilters,
         onFilterChange: setBuilderFilters,
+        filterConfig: sessionsFilterConfig
     };
 
     const toggleFavorite = (sessionId) => {
@@ -106,7 +107,7 @@ const Sessions = () => {
                     />
                 </div>
                 <div className={styles.filterRight}>
-                    {/* FilterControls에 builderFilterProps 전달 */}
+                    {/* [수정] FilterControls에 올바른 builderFilterProps를 전달합니다. */}
                     <FilterControls onRefresh={loadSessions} builderFilterProps={builderFilterProps} />
                     <FilterButton onClick={() => setIsColumnVisibleModalOpen(true)}>
                         <Columns size={16} /> Columns ({visibleColumns.length}/{columns.length})

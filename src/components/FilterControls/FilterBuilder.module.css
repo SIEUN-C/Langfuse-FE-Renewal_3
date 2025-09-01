@@ -8,14 +8,13 @@
 .dropdownMenu {
   position: absolute;
   top: calc(100% + 8px);
-  /* ❗️ 핵심: left, right 속성을 여기서 제거합니다. */
-  /* JavaScript가 인라인 스타일로 제어하게 됩니다. */
-  
+
+  right: 50%;
+  transform: translateX(50%);
+
   width: max-content;
-  min-width: 750px;
+  min-width: 700px; 
   z-index: 1000;
-  
-  /* 나머지 스타일은 이전과 동일하게 유지 */
   background-color: #0f172a;
   border: 1px solid #334155;
   border-radius: 8px;
@@ -26,6 +25,7 @@
   gap: 12px;
 }
 
+
 .filterRow {
   display: flex;
   align-items: center;
@@ -35,7 +35,8 @@
 .conjunction {
   color: #8a8a9e;
   font-size: 14px;
-  width: 60px; /* 'Where', 'And' 텍스트 정렬을 위해 너비 고정 */
+  width: 60px;
+  flex-shrink: 0;
 }
 
 .select, .input {
@@ -45,10 +46,23 @@
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 14px;
+  height: 38px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.input {
-  flex-grow: 1; /* 값 입력창이 남은 공간을 채우도록 설정 */
+.select {
+  width: 130px; /* [수정] 컬럼 및 연산자 선택창 너비 축소 */
+}
+
+.metaKeyInput {
+  width: 90px; /* [수정] Key 입력창 너비 축소 */
+  flex-shrink: 0;
+}
+
+.valueInput {
+  flex-grow: 1;
+  min-width: 120px; /* [수정] 값 입력창의 최소 너비 축소 */
 }
 
 .removeButton, .addButton {
@@ -62,6 +76,7 @@
   padding: 8px;
   border-radius: 6px;
   transition: background-color 0.2s, color 0.2s;
+  flex-shrink: 0;
 }
 
 .removeButton:hover {
@@ -71,7 +86,7 @@
 
 .addButton {
   background-color: #3c3c5a50;
-  align-self: flex-start; /* 버튼이 왼쪽 정렬되도록 */
+  align-self: flex-start;
   margin-top: 8px;
 }
 
@@ -101,9 +116,11 @@
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
-  flex-grow: 1; /* 다른 입력창과 너비를 맞춥니다. */
+  flex-grow: 1;
   text-align: left;
   white-space: nowrap;
+  height: 38px;
+  box-sizing: border-box;
 }
 
 .dateButton:hover {
@@ -112,4 +129,8 @@
 
 .dateButton span {
   color: #8a8a9e;
+}
+
+.valueInput > div {
+    flex-grow: 1;
 }

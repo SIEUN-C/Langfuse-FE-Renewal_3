@@ -12,10 +12,13 @@
   color: #e0e0ff;
   border: 1px solid #334155;
   border-radius: 6px;
+  /* [수정] 다른 필터 요소와 높이를 맞춥니다. */
+  height: 38px;
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
   text-align: left;
+  box-sizing: border-box;
 }
 
 .dropdownMenu {
@@ -33,12 +36,15 @@
 
 .searchInput {
   width: 100%;
+  /* [수정] 검색창을 더 컴팩트하게 만듭니다. */
   padding: 6px 10px;
+  font-size: 13px;
   background-color: #1e293b;
   border: 1px solid #334155;
   border-radius: 4px;
   color: #e0e0ff;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  box-sizing: border-box;
 }
 
 .optionsList {
@@ -53,7 +59,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  /* [수정] 옵션 간격을 줄입니다. */
+  padding: 4px 8px;
+  font-size: 13px; /* [추가] 폰트 크기 통일 */
   border-radius: 4px;
   cursor: pointer;
 }
