@@ -57,6 +57,9 @@ export const fetchPromptVersions = async (promptName) => {
 
     return {
       promptId: v.id, // [수정] 각 버전의 고유 DB ID를 promptId 필드에 추가
+      // --- ▼▼▼ [추가] 버전 삭제 ▼▼▼ ---
+      dbId: v.id,
+      // --- ▲▲▲ [추가] 버전 삭제 ▲▲▲ ---
       id: v.version,
       label: v.commitMessage || `Version ${v.version}`,
       labels: v.labels,

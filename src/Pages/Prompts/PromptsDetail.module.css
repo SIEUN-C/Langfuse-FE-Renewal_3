@@ -508,3 +508,51 @@
   font-size: 11px;
   font-weight: 600;
 }
+
+/* --- ▼▼▼ [추가] 버전 삭제 ▼▼▼ --- */
+.versionMenuContainer {
+  position: relative; /* 드롭다운 메뉴의 기준점 */
+  width: 32px; /* [수정] 아이콘 버튼의 너비를 고정하여 주변 요소가 밀리지 않도록 합니다. */
+  height: 32px; /* [추가] 높이도 고정하여 레이아웃 안정화 */
+  display: flex; /* [추가] 내부 아이콘 버튼을 중앙 정렬 */
+  align-items: center;
+  justify-content: center;
+}
+
+/* 버전 메뉴 드롭다운 */
+.versionDropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px); /* 아이콘 버튼 바로 아래 */
+  right: 0;
+  background-color: #1e293b; /* [수정] 배경색을 약간 더 밝게 */
+  border: 1px solid #334155;
+  border-radius: 8px; /* [수정] 모서리 둥글게 */
+  min-width: 180px; /* [수정] 최소 너비 설정 */
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* [수정] 그림자 추가 */
+  padding: 8px 0; /* [수정] 상하 패딩 추가, 좌우는 아이템에서 */
+  overflow: hidden; /* [추가] 내용이 넘치지 않도록 */
+}
+
+/* 드롭다운 메뉴 아이템 (버튼) */
+.versionMenuItem {
+  width: 100%;
+  padding: 10px 16px; /* [수정] 좌우 패딩을 늘려 콘텐츠와 경계 사이 여백 확보 */
+  font-size: 14px; /* [수정] 폰트 크기 약간 키움 */
+  color: #cbd5e1;
+  cursor: pointer;
+  text-align: left;
+  background: none;
+  border: none;
+  display: flex; /* [추가] 아이콘과 텍스트를 나란히 배치 */
+  align-items: center; /* [추가] 세로 중앙 정렬 */
+  gap: 10px; /* [추가] 아이콘과 텍스트 사이 간격 */
+  transition: background-color 0.2s, color 0.2s; /* [추가] 호버 애니메이션 */
+}
+
+/* 삭제 버튼 호버 시 빨간색 강조 */
+.versionMenuItem:hover {
+  background-color: #9f1239; /* [수정] 더 선명한 빨간색 배경 */
+  color: #fee2e2; /* [수정] 빨간색 배경에 대비되는 텍스트 색상 */
+}
+/* --- ▲▲▲ [추가] 버전 삭제 ▲▲▲ --- */

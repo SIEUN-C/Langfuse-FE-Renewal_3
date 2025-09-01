@@ -26,9 +26,9 @@ import {
 import DuplicatePromptModal from './DuplicatePromptModal.jsx';
 import { duplicatePrompt } from './DuplicatePromptModalApi.js';
 import { fetchPromptVersions } from './PromptsDetailApi.js';
-// --- ▼▼▼ [추가]  프롬프트 이동 화살표 구현 ▼▼▼ ---
-import { fetchPrompts } from './promptsApi.js';
-// --- ▲▲▲ [추가]  프롬프트 이동 화살표 구현 ▲▲▲ ---
+// --- ▼▼▼ [추가]  프롬프트 이동 화살표 구현 + 버전 삭제 ▼▼▼ ---
+import { deletePromptVersion, fetchPrompts } from './promptsApi.js';
+// --- ▲▲▲ [추가]  프롬프트 이동 화살표 구현 + 버전 삭제 ▲▲▲ ---
 import NewExperimentModal from './NewExperimentModal';
 
 // --- ▼▼▼ [추가] Reference 멘션 기능 구현 ▼▼▼ ---
@@ -102,6 +102,10 @@ export default function PromptsDetail() {
   const [isPlaygroundMenuOpen, setPlaygroundMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExperimentModalOpen, setExperimentModalOpen] = useState(false);
+  // --- ▼▼▼ [추가] 버전 삭제 ▼▼▼ ---
+  const [isVersionMenuOpen, setVersionMenuOpen] = useState(false);
+  const versionMenuRef = useRef(null);
+  // --- ▲▲▲ [추가] 버전 삭제 ▲▲▲ ---
 
   // 2. Memoized Values
   const filteredVersions = useMemo(() => {
@@ -194,6 +198,18 @@ export default function PromptsDetail() {
     };
   }, []);
 
+  // --- ▼▼▼ [추가] 버전 삭제 ▼▼▼ ---
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (versionMenuRef.current && !versionMenuRef.current.contains(event.target)) {
+        setVersionMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  // --- ▲▲▲ [추가] 버전 삭제 ▲▲▲ ---
+
   // 4. Event Handlers
   // --- ▼▼▼ [추가] 프롬프트 이동 화살표 구현 ▼▼▼ ---
   const handleNavigate = (promptName) => {
@@ -263,6 +279,32 @@ export default function PromptsDetail() {
     alert('실험 생성 요청이 콘솔에 기록되었습니다.');
     setExperimentModalOpen(false);
   };
+
+  // --- ▼▼▼ [추가] 버전 삭제 ▼▼▼ ---
+  const handleDeleteVersion = async () => {
+    if (!selectedVersion || !selectedVersion.dbId) {
+      alert("삭제할 버전을 선택해주세요.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `정말로 버전 #${selectedVersion.id} 을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+    );
+
+    if (confirmDelete) {
+      try {
+        await deletePromptVersion(selectedVersion.dbId, projectId);
+        alert(`버전 #${selectedVersion.id} 이(가) 성공적으로 삭제되었습니다.`);
+        // 삭제 후 데이터 다시 로드
+        loadPromptData();
+      } catch (error) {
+        console.error("버전 삭제 실패:", error);
+        alert(`버전 삭제 중 오류 발생: ${error.message}`);
+      }
+    }
+    setVersionMenuOpen(false); // 메뉴 닫기
+  };
+  // --- ▲▲▲ [추가] 버전 삭제 ▲▲▲ ---
 
   // 5. Conditional Renders for Loading/Error States
   if (isLoading) {
@@ -404,7 +446,23 @@ export default function PromptsDetail() {
                 Dataset run
               </button>
               <button className={styles.iconButton}><MessageCircle size={16} /></button>
-              <button className={styles.iconButton}><MoreVertical size={18} /></button>
+              {/* --- ▼▼▼ [수정] 버전 삭제 ▼▼▼ --- */}
+              <div className={styles.versionMenuContainer} ref={versionMenuRef}>
+                <button
+                  className={styles.iconButton}
+                  onClick={() => setVersionMenuOpen(prev => !prev)}
+                >
+                  <MoreVertical size={18} />
+                </button>
+                {isVersionMenuOpen && (
+                  <div className={styles.versionDropdownMenu}>
+                    <button className={styles.versionMenuItem} onClick={handleDeleteVersion}>
+                      Delete version
+                    </button>
+                  </div>
+                )}
+              </div>
+              {/* --- ▲▲▲ [수정] 버전 삭제 ▲▲▲ --- */}
             </div>
           </div>
           <div className={styles.promptArea}>

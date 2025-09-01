@@ -156,7 +156,10 @@ const getAllPromptVersions = async (promptName, projectId) => {
   return response.data?.result?.data?.json?.promptVersions || [];
 };
 
-const deletePromptVersion = async (promptVersionId, projectId) => {
+export const deletePromptVersion = async (promptVersionId, projectId) => {
+  if (!projectId) throw new Error("Project ID is required to delete a prompt version.");
+  if (!promptVersionId) throw new Error("Prompt Version ID is required.");
+
   try {
     // API 요청 본문(payload)이 서버의 요구사항과 일치하는지 확인합니다.
     // 보통 'promptVersionId' 또는 'versionId'와 같은 키를 사용합니다.
