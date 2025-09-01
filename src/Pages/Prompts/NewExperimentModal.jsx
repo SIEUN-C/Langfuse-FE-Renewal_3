@@ -1,8 +1,7 @@
+// src/Pages/Prompts/NewExperimentModal.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import styles from './NewExperimentModal.module.css';
-// --- ▼▼▼ [수정] Search 아이콘을 lucide-react에서 가져옵니다. ▼▼▼ ---
 import { X, ChevronDown, Check, ExternalLink, Search } from 'lucide-react';
-// --- ▲▲▲ [수정] 완료 ▲▲▲ ---
 import useProjectId from '../../hooks/useProjectId';
 import { fetchAllPromptNames, fetchVersionsForPrompt, fetchLlmConnections, fetchAllDatasetNames } from './NewExperimentModalApi';
 import Modal from '../../components/Modal/Modal';
@@ -12,6 +11,7 @@ import { publicKey, secretKey } from '../../lib/langfuse';
 import ModelAdvancedSettingsPopover from './ModelAdvancedSettingsPopover';
 
 const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersion }) => {
+  // ... (다른 상태 선언은 기존과 동일)
   const [experimentName, setExperimentName] = useState('');
   const [description, setDescription] = useState('');
   const [allPrompts, setAllPrompts] = useState([]);
@@ -26,33 +26,46 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
   
   const [isLlmModalOpen, setIsLlmModalOpen] = useState(false);
   
-  // --- ▼▼▼ [수정] 데이터셋 관련 상태들을 관리합니다. ▼▼▼ ---
   const [datasets, setDatasets] = useState([]);
   const [selectedDataset, setSelectedDataset] = useState('');
   const [datasetError, setDatasetError] = useState(false);
-  // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
   
-  // --- ▼▼▼ Model name 커스텀 드롭다운을 위한 state 및 ref (기존 코드 유지) ▼▼▼ ---
   const [selectedModel, setSelectedModel] = useState('');
   const [isModelDropdownOpen, setModelDropdownOpen] = useState(false);
   const modelRef = useRef(null); 
 
   const { projectId } = useProjectId();
   
-  const DEFAULT_SETTINGS = { temperature: 0.7, maxTokens: 1024, topP: 1.0 };
+  // --- ▼▼▼ [수정 원인 1] Playground 버전과 동일한 기본값 구조로 복원 ---
+  // 이전 코드에서는 useTemperature 같은 토글 활성화 상태값이 빠져있어서
+  // 자식 컴포넌트가 토글 상태를 알 수 없어 기능이 동작하지 않았습니다.
+  const DEFAULT_SETTINGS = {
+    useTemperature: true,
+    useTopP: false,
+    useMaxTokens: false,
+    temperature: 0.7,
+    maxTokens: 1024,
+    topP: 1.0,
+    additionalOptions: false,
+  };
   const [modelSettings, setModelSettings] = useState(DEFAULT_SETTINGS);
+  // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
+
   const [isAdvancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const settingsButtonRef = useRef(null);
 
-  // --- ▼▼▼ [추가] 프롬프트 검색 기능과 커스텀 드롭다운을 위한 상태 및 ref를 추가합니다. ▼▼▼ ---
   const [promptSearchQuery, setPromptSearchQuery] = useState('');
   const [isPromptDropdownOpen, setPromptDropdownOpen] = useState(false);
   const promptDropdownRef = useRef(null);
-  // --- ▲▲▲ [추가] 완료 ▲▲▲ ---
 
-  const handleSettingChange = (key, value) => {
-    setModelSettings(prev => ({ ...prev, [key]: value }));
+  // --- ▼▼▼ [수정 원인 2] 자식 컴포넌트와의 데이터 전달 방식(함수) 수정 ---
+  // 이전 코드: handleSettingChange = (key, value) => { ... }
+  // 자식 컴포넌트는 변경된 설정 전체를 '객체'로 보내는데, 부모는 두 개의 '인자'를 받으려고 해서 데이터 전달이 실패했습니다.
+  // 이제 자식이 보내는 새로운 설정 객체(newSettings) 전체를 받아 상태를 업데이트하도록 수정합니다.
+  const handleSettingChange = (newSettings) => {
+    setModelSettings(newSettings);
   };
+  // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
 
   const refreshConnections = async () => {
     if (projectId) {
@@ -74,6 +87,7 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
     }
   };
   
+  // ... (useEffect 및 다른 핸들러 함수들은 기존과 동일)
   useEffect(() => {
     if (isOpen && projectId) {
       const loadInitialData = async () => {
@@ -89,11 +103,9 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
           setSelectedProvider(connections[0].id);
         }
         
-        // --- ▼▼▼ [수정] API 응답 결과가 비어있더라도 항상 드롭다운 옵션을 생성합니다. ▼▼▼ ---
         const datasetOptions = ['Select a dataset', ...datasetNames];
         setDatasets(datasetOptions);
         setSelectedDataset(datasetOptions[0]);
-        // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
       };
       loadInitialData();
       setExperimentName('');
@@ -119,11 +131,9 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // --- ▼▼▼ [수정] 프롬프트 드롭다운 외부 클릭 감지 로직을 추가합니다. ▼▼▼ ---
       if (promptDropdownRef.current && !promptDropdownRef.current.contains(event.target)) {
         setPromptDropdownOpen(false);
       }
-      // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
       if (providerRef.current && !providerRef.current.contains(event.target)) {
         setProviderDropdownOpen(false);
       }
@@ -144,7 +154,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
     return selectedProviderObject.customModels || [];
   }, [selectedProviderObject]);
   
-  // --- ▼▼▼ [추가] 검색어에 따라 프롬프트 목록을 필터링하는 로직을 추가합니다. ▼▼▼ ---
   const filteredPrompts = useMemo(() => {
     if (!promptSearchQuery) {
       return allPrompts;
@@ -153,7 +162,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
       p.toLowerCase().includes(promptSearchQuery.toLowerCase())
     );
   }, [allPrompts, promptSearchQuery]);
-  // --- ▲▲▲ [추가] 완료 ▲▲▲ ---
 
   useEffect(() => {
     if (availableModels.length > 0) {
@@ -190,17 +198,17 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
     setSelectedVersion(Number(e.target.value));
   };
 
-  // --- ▼▼▼ [수정] 기존 handlePromptChange 함수를 커스텀 드롭다운에 맞게 수정합니다. ▼▼▼ ---
   const handlePromptSelect = (promptName) => {
     setSelectedPrompt(promptName);
-    setPromptDropdownOpen(false); // 항목 선택 시 드롭다운 닫기
+    setPromptDropdownOpen(false);
   };
-  // --- ▲▲▲ [수정] 완료 ▲▲▲ ---
+  // ...
 
   return (
     <>
       <div className={styles.overlay} onClick={onClose}>
         <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          {/* ... (Modal Header, Body의 다른 부분들은 기존과 동일) ... */}
           <div className={styles.header}>
             <div>
               <h2 className={styles.title}>New Dataset Run</h2>
@@ -240,7 +248,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Prompt</h3>
               <div className={styles.inlineGroup}>
-                {/* --- ▼▼▼ [수정] 기존 select를 커스텀 드롭다운으로 교체합니다. ▼▼▼ --- */}
                 <div className={styles.customSelectContainer} ref={promptDropdownRef} style={{ flex: 2 }}>
                   <button
                     className={styles.selectButton}
@@ -277,7 +284,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
                     </div>
                   )}
                 </div>
-                {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
 
                 <div className={styles.selectWrapper} style={{ flex: 1 }}>
                   <select
@@ -292,7 +298,7 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
                 </div>
               </div>
             </div>
-
+            
             <div className={styles.section}>
               <div style={{ position: 'relative' }}>
                 <div className={styles.sectionHeader}>
@@ -307,6 +313,9 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
                   </button>
                 </div>
                 
+                {/* --- ▼▼▼ [수정 원인 3] 자식 컴포넌트에 올바른 props 전달 ▼▼▼ ---
+                // 이전 코드에서는 apiKeyDisplayValue라는 사용하지 않는 props를 전달하고 있었습니다.
+                // 이제 API 키 조회를 위해 projectId와 provider를, 상태 관리를 위해 settings와 onSettingChange를 정확히 전달합니다. */}
                 <ModelAdvancedSettingsPopover
                   open={isAdvancedSettingsOpen}
                   onClose={() => setAdvancedSettingsOpen(false)}
@@ -314,8 +323,10 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
                   settings={modelSettings}
                   onSettingChange={handleSettingChange}
                   onReset={() => setModelSettings(DEFAULT_SETTINGS)}
-                  apiKeyDisplayValue={selectedProviderObject?.displaySecretKey}
+                  projectId={projectId}
+                  provider={selectedProviderObject?.provider}
                 />
+                {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
               </div>
               
               <div className={styles.formRow}>
@@ -403,7 +414,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
 
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Dataset (expected columns)</h3>
-              {/* --- ▼▼▼ [수정] 조건부 렌더링을 제거하고 항상 드롭다운과 유효성 검사 로직을 사용하도록 되돌립니다. ▼▼▼ --- */}
               <div className={styles.selectWrapper}>
                 <select
                   className={`${styles.select} ${datasetError ? styles.error : ''}`}
@@ -422,16 +432,14 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
               {datasetError && (
                 <p className={styles.errorMessage}>Please select a dataset</p>
               )}
-              {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
             </div>
-
+            {/* ... (Modal Footer 및 다른 부분들은 기존과 동일) ... */}
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Evaluators</h3>
               <p className={styles.evaluatorInfo}>Select a dataset first to set up evaluators.</p>
             </div>
           </div>
           <div className={styles.footer}>
-            {/* --- ▼▼▼ [수정] 버튼의 disabled 속성을 제거하여 항상 활성화 상태로 둡니다. ▼▼▼ --- */}
             <button
                 type="button"
                 className={styles.createButton}
@@ -439,7 +447,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
             >
                 Start
             </button>
-            {/* --- ▲▲▲ [수정] 완료 ▲▲▲ --- */}
           </div>
         </div>
       </div>
@@ -459,7 +466,6 @@ const NewExperimentModal = ({ isOpen, onClose, onSubmit, promptName, promptVersi
 };
 
 export default NewExperimentModal;
-
 
 
 
